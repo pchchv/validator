@@ -13,3 +13,8 @@ type CustomTypeFunc func(field reflect.Value) interface{}
 // FilterFunc is the type used to filter fields using the StructFiltered(...) function.
 // Return true causes the field to be filtered/skipped on validation.
 type FilterFunc func(ns []byte) bool
+
+type internalValidationFuncWrapper struct {
+	fn                 FuncCtx
+	runValidationOnNil bool
+}
