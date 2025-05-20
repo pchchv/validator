@@ -37,6 +37,14 @@ type cTag struct {
 	runValidationWhenNil bool
 }
 
+type cField struct {
+	idx        int
+	name       string
+	altName    string
+	namesEqual bool
+	cTags      *cTag
+}
+
 type structCache struct {
 	lock sync.Mutex
 	m    atomic.Value
