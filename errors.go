@@ -62,6 +62,9 @@ type FieldError interface {
 	Error() string
 }
 
+// ValidationErrors is an array of FieldError's for use in custom error messages post validation.
+type ValidationErrors []FieldError
+
 // fieldError contains a single field's validation error along with other properties that
 // may be needed for error message creation it complies with the FieldError interface.
 type fieldError struct {
