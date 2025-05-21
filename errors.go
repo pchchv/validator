@@ -89,3 +89,19 @@ func (fe *fieldError) Namespace() string {
 func (fe *fieldError) StructNamespace() string {
 	return fe.structNs
 }
+
+// Field returns the field's name with the tag name taking precedence over the field's actual name.
+func (fe *fieldError) Field() string {
+	return fe.ns[len(fe.ns)-int(fe.fieldLen):]
+}
+
+// StructField returns the field's actual name from the struct,
+// when able to determine.
+func (fe *fieldError) StructField() string {
+	return fe.structNs[len(fe.structNs)-int(fe.structfieldLen):]
+}
+
+// Value returns the actual field's value in case needed for creating the error message.
+func (fe *fieldError) Value() interface{} {
+	return fe.value
+}
