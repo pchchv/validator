@@ -1,6 +1,11 @@
 package validator
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+)
+
+const fieldErrMsg = "Key: '%s' Error:Field validation for '%s' failed on the '%s' tag"
 
 // FieldError contains all functions to get error details.
 type FieldError interface {
@@ -104,4 +109,25 @@ func (fe *fieldError) StructField() string {
 // Value returns the actual field's value in case needed for creating the error message.
 func (fe *fieldError) Value() interface{} {
 	return fe.value
+}
+
+// Param returns the param value, in string form for comparison.
+// This will also help with generating an error message.
+func (fe *fieldError) Param() string {
+	return fe.param
+}
+
+// Kind returns the Field's reflect Kind.
+func (fe *fieldError) Kind() reflect.Kind {
+	return fe.kind
+}
+
+// Type returns the Field's reflect Type.
+func (fe *fieldError) Type() reflect.Type {
+	return fe.typ
+}
+
+// Error returns the fieldError's error message.
+func (fe *fieldError) Error() string {
+	return fmt.Sprintf(fieldErrMsg, fe.ns, fe.Field(), fe.tag)
 }
