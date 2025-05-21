@@ -77,3 +77,15 @@ func (fe *fieldError) Tag() string {
 func (fe *fieldError) ActualTag() string {
 	return fe.actualTag
 }
+
+// Namespace returns the namespace for the field error,
+// with the tag name taking precedence over the field's actual name.
+func (fe *fieldError) Namespace() string {
+	return fe.ns
+}
+
+// StructNamespace returns the namespace for the field error,
+// with the field's actual name.
+func (fe *fieldError) StructNamespace() string {
+	return fe.structNs
+}
