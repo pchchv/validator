@@ -81,6 +81,12 @@ func (ve ValidationErrors) Error() string {
 	return strings.TrimSpace(buff.String())
 }
 
+// InvalidValidationError describes an invalid argument passed to
+// `Struct`, `StructExcept`, StructPartial` or `Field`.
+type InvalidValidationError struct {
+	Type reflect.Type
+}
+
 // fieldError contains a single field's validation error along with other properties that
 // may be needed for error message creation it complies with the FieldError interface.
 type fieldError struct {
