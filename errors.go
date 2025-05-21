@@ -87,6 +87,15 @@ type InvalidValidationError struct {
 	Type reflect.Type
 }
 
+// Error returns InvalidValidationError message.
+func (e *InvalidValidationError) Error() string {
+	if e.Type == nil {
+		return "validator: (nil)"
+	}
+
+	return "validator: (nil " + e.Type.String() + ")"
+}
+
 // fieldError contains a single field's validation error along with other properties that
 // may be needed for error message creation it complies with the FieldError interface.
 type fieldError struct {
