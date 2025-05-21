@@ -1,8 +1,10 @@
 package validator
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 const fieldErrMsg = "Key: '%s' Error:Field validation for '%s' failed on the '%s' tag"
@@ -64,6 +66,20 @@ type FieldError interface {
 
 // ValidationErrors is an array of FieldError's for use in custom error messages post validation.
 type ValidationErrors []FieldError
+
+// Error is intended for use in development + debugging and not intended to be a production error message.
+// It allows ValidationErrors to subscribe to the Error interface.
+// All information to create an error message specific to application is contained within the
+// FieldError found within the ValidationErrors array.
+func (ve ValidationErrors) Error() string {
+	buff := bytes.NewBufferString("")
+	for i := 0; i < len(ve); i++ {
+		buff.WriteString(ve[i].Error())
+		buff.WriteString("\n")
+	}
+
+	return strings.TrimSpace(buff.String())
+}
 
 // fieldError contains a single field's validation error along with other properties that
 // may be needed for error message creation it complies with the FieldError interface.
