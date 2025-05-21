@@ -7,6 +7,11 @@ import (
 
 const fieldErrMsg = "Key: '%s' Error:Field validation for '%s' failed on the '%s' tag"
 
+var (
+	_ error      = new(fieldError)
+	_ FieldError = new(fieldError)
+)
+
 // FieldError contains all functions to get error details.
 type FieldError interface {
 	// Tag returns the validation tag that failed.
