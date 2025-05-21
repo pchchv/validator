@@ -51,3 +51,18 @@ type FieldError interface {
 	// Error returns the FieldError's message.
 	Error() string
 }
+
+// fieldError contains a single field's validation error along with other properties that
+// may be needed for error message creation it complies with the FieldError interface.
+type fieldError struct {
+	tag            string
+	actualTag      string
+	ns             string
+	structNs       string
+	fieldLen       uint8
+	structfieldLen uint8
+	value          interface{}
+	param          string
+	kind           reflect.Kind
+	typ            reflect.Type
+}
