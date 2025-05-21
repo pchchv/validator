@@ -66,3 +66,14 @@ type fieldError struct {
 	kind           reflect.Kind
 	typ            reflect.Type
 }
+
+// Tag returns the validation tag that failed.
+func (fe *fieldError) Tag() string {
+	return fe.tag
+}
+
+// ActualTag returns the validation tag that failed,
+// even if an alias the actual tag within the alias will be returned.
+func (fe *fieldError) ActualTag() string {
+	return fe.actualTag
+}
