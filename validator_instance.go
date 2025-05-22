@@ -5,6 +5,24 @@ import (
 	"sync"
 )
 
+const (
+	utf8HexComma       = "0x2C"
+	utf8Pipe           = "0x7C"
+	structOnlyTag      = "structonly"
+	noStructLevelTag   = "nostructlevel"
+	omitzero           = "omitzero"
+	omitempty          = "omitempty"
+	omitnil            = "omitnil"
+	isdefault          = "isdefault"
+	skipValidationTag  = "-"
+	diveTag            = "dive"
+	keysTag            = "keys"
+	endKeysTag         = "endkeys"
+	requiredTag        = "required"
+	restrictedTagChars = ".[],|=+()`~!@#$%^&*\\\"/?<>{}"
+	restrictedAliasErr = "Alias '%s' either contains restricted characters or is the same as a restricted tag needed for normal operation"
+)
+
 // TagNameFunc allows for adding of a custom tag name parser.
 type TagNameFunc func(field reflect.StructField) string
 
