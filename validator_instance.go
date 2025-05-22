@@ -142,6 +142,38 @@ func (v *Validate) RegisterStructValidationMapRules(rules map[string]string, typ
 	}
 }
 
+// RegisterTagNameFunc registers a function to get alternate names for StructFields.
+// For example, to use the names which have been specified for JSON representations of structs,
+// rather than normal Go field names:
+//
+//	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+//	    name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+//	    // skip if tag key says it should be ignored
+//	    if name == "-" {
+//	        return ""
+//	    }
+//	    return name
+//	})
+func (v *Validate) RegisterTagNameFunc(fn TagNameFunc) {
+	v.tagNameFunc = fn
+	v.hasTagNameFunc = true
+}
+
+// RegisterCustomTypeFunc registers a CustomTypeFunc against a number of types.
+//
+// NOTE: this method is not thread-safe it is intended that these all be registered prior to any validation.
+func (v *Validate) RegisterCustomTypeFunc(fn CustomTypeFunc, types ...interface{}) {
+	if v.customFuncs == nil {
+		v.customFuncs = make(map[reflect.Type]CustomTypeFunc)
+	}
+
+	for _, t := range types {
+		v.customFuncs[reflect.TypeOf(t)] = fn
+	}
+
+	v.hasCustomFuncs = true
+}
+
 func (v *Validate) registerValidation(tag string, fn FuncCtx, bakedIn bool, nilCheckable bool) error {
 	if len(tag) == 0 {
 		return errors.New("function Key cannot be empty")
