@@ -1,7 +1,9 @@
 package validator
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -98,4 +100,142 @@ func (tc *tagCache) Set(key string, value *cTag) {
 
 	nm[key] = value
 	tc.m.Store(nm)
+}
+
+func (v *Validate) parseFieldTagsRecursive(tag string, fieldName string, alias string, hasAlias bool) (firstCtag *cTag, current *cTag) {
+	var t string
+	noAlias := len(alias) == 0
+	tags := strings.Split(tag, tagSeparator)
+	for i := 0; i < len(tags); i++ {
+		t = tags[i]
+		if noAlias {
+			alias = t
+		}
+
+		// check map for alias and process new tags,
+		// otherwise process as usual
+		if tagsVal, found := v.aliases[t]; found {
+			if i == 0 {
+				firstCtag, current = v.parseFieldTagsRecursive(tagsVal, fieldName, t, true)
+			} else {
+				next, curr := v.parseFieldTagsRecursive(tagsVal, fieldName, t, true)
+				current.next, current = next, curr
+			}
+			continue
+		}
+
+		var prevTag tagType
+		if i == 0 {
+			current = &cTag{aliasTag: alias, hasAlias: hasAlias, hasTag: true, typeof: typeDefault}
+			firstCtag = current
+		} else {
+			prevTag = current.typeof
+			current.next = &cTag{aliasTag: alias, hasAlias: hasAlias, hasTag: true}
+			current = current.next
+		}
+
+		switch t {
+		case diveTag:
+			current.typeof = typeDive
+		case keysTag:
+			current.typeof = typeKeys
+			if i == 0 || prevTag != typeDive {
+				panic(fmt.Sprintf("'%s' tag must be immediately preceded by the '%s' tag", keysTag, diveTag))
+			}
+			// need to pass along only keys tag
+			// need to increment i to skip over the keys tags
+			i++
+			b := make([]byte, 0, 64)
+			for ; i < len(tags); i++ {
+				b = append(b, tags[i]...)
+				b = append(b, ',')
+				if tags[i] == endKeysTag {
+					break
+				}
+			}
+
+			current.keys, _ = v.parseFieldTagsRecursive(string(b[:len(b)-1]), fieldName, "", false)
+		case endKeysTag:
+			current.typeof = typeEndKeys
+			// if there are more in tags then there was no keysTag defined
+			// and an error should be thrown
+			if i != len(tags)-1 {
+				panic(keysTagNotDefined)
+			}
+			return
+		case omitzero:
+			current.typeof = typeOmitZero
+			continue
+		case omitempty:
+			current.typeof = typeOmitEmpty
+		case omitnil:
+			current.typeof = typeOmitNil
+		case structOnlyTag:
+			current.typeof = typeStructOnly
+		case noStructLevelTag:
+			current.typeof = typeNoStructLevel
+		default:
+			if t == isdefault {
+				current.typeof = typeIsDefault
+			}
+
+			// if a pipe character is needed within the param you must use the utf8Pipe representation "0x7C"
+			orVals := strings.Split(t, orSeparator)
+			for j := 0; j < len(orVals); j++ {
+				vals := strings.SplitN(orVals[j], tagKeySeparator, 2)
+				if noAlias {
+					alias = vals[0]
+					current.aliasTag = alias
+				} else {
+					current.actualAliasTag = t
+				}
+
+				if j > 0 {
+					current.next = &cTag{aliasTag: alias, actualAliasTag: current.actualAliasTag, hasAlias: hasAlias, hasTag: true}
+					current = current.next
+				}
+
+				current.hasParam = len(vals) > 1
+				current.tag = vals[0]
+				if len(current.tag) == 0 {
+					panic(strings.TrimSpace(fmt.Sprintf(invalidValidation, fieldName)))
+				}
+
+				if wrapper, ok := v.validations[current.tag]; ok {
+					current.fn = wrapper.fn
+					current.runValidationWhenNil = wrapper.runValidationOnNil
+				} else {
+					panic(strings.TrimSpace(fmt.Sprintf(undefinedValidation, current.tag, fieldName)))
+				}
+
+				if len(orVals) > 1 {
+					current.typeof = typeOr
+				}
+
+				if len(vals) > 1 {
+					current.param = strings.ReplaceAll(strings.ReplaceAll(vals[1], utf8HexComma, ","), utf8Pipe, "|")
+				}
+			}
+			current.isBlockEnd = true
+		}
+	}
+	return
+}
+
+func (v *Validate) fetchCacheTag(tag string) *cTag {
+	// find cached tag
+	ctag, found := v.tagCache.Get(tag)
+	if !found {
+		v.tagCache.lock.Lock()
+		defer v.tagCache.lock.Unlock()
+		// could have been multiple trying to access,
+		// but once first is done this ensures tag
+		// isn't parsed again
+		ctag, found = v.tagCache.Get(tag)
+		if !found {
+			ctag, _ = v.parseFieldTagsRecursive(tag, "", "", false)
+			v.tagCache.Set(tag, ctag)
+		}
+	}
+	return ctag
 }
