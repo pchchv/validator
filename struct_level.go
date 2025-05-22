@@ -28,3 +28,6 @@ type StructLevel interface {
 	// Most of the time they will be blank, unless you validate at a level lower the current field depth.
 	ReportValidationErrors(relativeNamespace, relativeActualNamespace string, errs ValidationErrors)
 }
+
+// StructLevelFunc accepts all values needed for struct level validation.
+type StructLevelFunc func(sl StructLevel)
