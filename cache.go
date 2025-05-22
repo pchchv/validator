@@ -239,3 +239,70 @@ func (v *Validate) fetchCacheTag(tag string) *cTag {
 	}
 	return ctag
 }
+
+func (v *Validate) extractStructCache(current reflect.Value, sName string) *cStruct {
+	v.structCache.lock.Lock()
+	defer v.structCache.lock.Unlock() // leave as defer! because if inner panics, it will never get unlocked otherwise!
+
+	typ := current.Type()
+	// could have been multiple trying to access, but once first is done this ensures struct
+	// isn't parsed again.
+	cs, ok := v.structCache.Get(typ)
+	if ok {
+		return cs
+	}
+
+	cs = &cStruct{name: sName, fields: make([]*cField, 0), fn: v.structLevelFuncs[typ]}
+	numFields := current.NumField()
+	rules := v.rules[typ]
+
+	var ctag *cTag
+	var tag, customName string
+	var fld reflect.StructField
+	for i := 0; i < numFields; i++ {
+		fld = typ.Field(i)
+		if !v.privateFieldValidation && !fld.Anonymous && len(fld.PkgPath) > 0 {
+			continue
+		}
+
+		if rtag, ok := rules[fld.Name]; ok {
+			tag = rtag
+		} else {
+			tag = fld.Tag.Get(v.tagName)
+		}
+
+		if tag == skipValidationTag {
+			continue
+		}
+
+		customName = fld.Name
+		if v.hasTagNameFunc {
+			name := v.tagNameFunc(fld)
+			if len(name) > 0 {
+				customName = name
+			}
+		}
+
+		// cannot use shared tag cache, because tags may be equal, but things like alias may be different
+		// and so only struct level caching can be used instead of combined with Field tag caching
+
+		if len(tag) > 0 {
+			ctag, _ = v.parseFieldTagsRecursive(tag, fld.Name, "", false)
+		} else {
+			// even if field doesn't have validations need cTag for
+			// traversing to potential inner/nested elements of the field
+			ctag = new(cTag)
+		}
+
+		cs.fields = append(cs.fields, &cField{
+			idx:        i,
+			name:       fld.Name,
+			altName:    customName,
+			cTags:      ctag,
+			namesEqual: fld.Name == customName,
+		})
+	}
+
+	v.structCache.Set(typ, cs)
+	return cs
+}
