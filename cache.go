@@ -77,3 +77,19 @@ type tagCache struct {
 	lock sync.Mutex
 	m    atomic.Value
 }
+
+func (tc *tagCache) Get(key string) (c *cTag, found bool) {
+	c, found = tc.m.Load().(map[string]*cTag)[key]
+	return
+}
+
+func (tc *tagCache) Set(key string, value *cTag) {
+	m := tc.m.Load().(map[string]*cTag)
+	nm := make(map[string]*cTag, len(m)+1)
+	for k, v := range m {
+		nm[k] = v
+	}
+
+	nm[key] = value
+	tc.m.Store(nm)
+}
