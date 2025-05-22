@@ -72,3 +72,8 @@ func (sc *structCache) Set(key reflect.Type, value *cStruct) {
 	nm[key] = value
 	sc.m.Store(nm)
 }
+
+type tagCache struct {
+	lock sync.Mutex
+	m    atomic.Value
+}
