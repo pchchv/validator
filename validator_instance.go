@@ -1,7 +1,10 @@
 package validator
 
 import (
+	"errors"
+	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 )
 
@@ -21,6 +24,7 @@ const (
 	requiredTag        = "required"
 	restrictedTagChars = ".[],|=+()`~!@#$%^&*\\\"/?<>{}"
 	restrictedAliasErr = "Alias '%s' either contains restricted characters or is the same as a restricted tag needed for normal operation"
+	restrictedTagErr   = "Tag '%s' either contains restricted characters or is the same as a restricted tag needed for normal operation"
 )
 
 // TagNameFunc allows for adding of a custom tag name parser.
@@ -51,6 +55,35 @@ type Validate struct {
 	hasTagNameFunc         bool
 	requiredStructEnabled  bool
 	privateFieldValidation bool
+}
+
+// RegisterAlias registers a mapping of a single validation tag that defines a
+// common or complex set of validation(s) to simplify adding validations to structures.
+//
+// NOTE: this is not thread-safe it is intended that these all be registered prior to any validation.
+func (v *Validate) RegisterAlias(alias, tags string) {
+	if _, ok := restrictedTags[alias]; ok || strings.ContainsAny(alias, restrictedTagChars) {
+		panic(fmt.Sprintf(restrictedAliasErr, alias))
+	}
+
+	v.aliases[alias] = tags
+}
+
+func (v *Validate) registerValidation(tag string, fn FuncCtx, bakedIn bool, nilCheckable bool) error {
+	if len(tag) == 0 {
+		return errors.New("function Key cannot be empty")
+	}
+
+	if fn == nil {
+		return errors.New("function cannot be empty")
+	}
+
+	if _, ok := restrictedTags[tag]; !bakedIn && (ok || strings.ContainsAny(tag, restrictedTagChars)) {
+		panic(fmt.Sprintf(restrictedTagErr, tag))
+	}
+
+	v.validations[tag] = internalValidationFuncWrapper{fn: fn, runValidationOnNil: nilCheckable}
+	return nil
 }
 
 type internalValidationFuncWrapper struct {
