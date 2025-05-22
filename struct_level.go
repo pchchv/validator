@@ -1,6 +1,9 @@
 package validator
 
-import "reflect"
+import (
+	"context"
+	"reflect"
+)
 
 // StructLevel contains all the information and helper functions to validate the structure.
 type StructLevel interface {
@@ -31,3 +34,8 @@ type StructLevel interface {
 
 // StructLevelFunc accepts all values needed for struct level validation.
 type StructLevelFunc func(sl StructLevel)
+
+// StructLevelFuncCtx accepts all values needed for
+// struct level validation but also allows passing of
+// contextual validation information via context.Context.
+type StructLevelFuncCtx func(ctx context.Context, sl StructLevel)
