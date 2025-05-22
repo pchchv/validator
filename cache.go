@@ -20,6 +20,12 @@ const (
 	typeOmitZero
 )
 
+const (
+	invalidValidation   = "Invalid validation tag on field '%s'"
+	undefinedValidation = "Undefined validation function '%s' on field '%s'"
+	keysTagNotDefined   = "'" + endKeysTag + "' tag encountered without a corresponding '" + keysTag + "' tag"
+)
+
 type tagType uint8
 
 type cTag struct {

@@ -11,6 +11,9 @@ import (
 const (
 	utf8HexComma       = "0x2C"
 	utf8Pipe           = "0x7C"
+	tagSeparator       = ","
+	orSeparator        = "|"
+	tagKeySeparator    = "="
 	structOnlyTag      = "structonly"
 	noStructLevelTag   = "nostructlevel"
 	omitzero           = "omitzero"
