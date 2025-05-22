@@ -39,3 +39,10 @@ type StructLevelFunc func(sl StructLevel)
 // struct level validation but also allows passing of
 // contextual validation information via context.Context.
 type StructLevelFuncCtx func(ctx context.Context, sl StructLevel)
+
+// wrapStructLevelFunc wraps normal StructLevelFunc makes it compatible with StructLevelFuncCtx.
+func wrapStructLevelFunc(fn StructLevelFunc) StructLevelFuncCtx {
+	return func(ctx context.Context, sl StructLevel) {
+		fn(sl)
+	}
+}
