@@ -89,6 +89,59 @@ func (v *Validate) RegisterValidationCtx(tag string, fn FuncCtx, callValidationE
 	return v.registerValidation(tag, fn, false, nilCheckable)
 }
 
+// RegisterStructValidation registers a StructLevelFunc against a number of types.
+//
+// NOTE: this method is not thread-safe it is intended that these all be registered prior to any validation.
+func (v *Validate) RegisterStructValidation(fn StructLevelFunc, types ...interface{}) {
+	v.RegisterStructValidationCtx(wrapStructLevelFunc(fn), types...)
+}
+
+// RegisterStructValidationCtx registers a StructLevelFuncCtx against a number of
+// types and allows passing of contextual validation information via context.Context.
+//
+// NOTE: this method is not thread-safe it is intended that these all be registered prior to any validation.
+func (v *Validate) RegisterStructValidationCtx(fn StructLevelFuncCtx, types ...interface{}) {
+	if v.structLevelFuncs == nil {
+		v.structLevelFuncs = make(map[reflect.Type]StructLevelFuncCtx)
+	}
+
+	for _, t := range types {
+		tv := reflect.ValueOf(t)
+		if tv.Kind() == reflect.Ptr {
+			t = reflect.Indirect(tv).Interface()
+		}
+
+		v.structLevelFuncs[reflect.TypeOf(t)] = fn
+	}
+}
+
+// RegisterStructValidationMapRules registers validate map rules.
+// Be aware that map validation rules supersede those defined on a/the struct if present.
+//
+// NOTE: this method is not thread-safe it is intended that these all be registered prior to any validation
+func (v *Validate) RegisterStructValidationMapRules(rules map[string]string, types ...interface{}) {
+	if v.rules == nil {
+		v.rules = make(map[reflect.Type]map[string]string)
+	}
+
+	deepCopyRules := make(map[string]string)
+	for i, rule := range rules {
+		deepCopyRules[i] = rule
+	}
+
+	for _, t := range types {
+		typ := reflect.TypeOf(t)
+		if typ.Kind() == reflect.Ptr {
+			typ = typ.Elem()
+		}
+
+		if typ.Kind() == reflect.Struct {
+			v.rules[typ] = deepCopyRules
+		}
+
+	}
+}
+
 func (v *Validate) registerValidation(tag string, fn FuncCtx, bakedIn bool, nilCheckable bool) error {
 	if len(tag) == 0 {
 		return errors.New("function Key cannot be empty")
