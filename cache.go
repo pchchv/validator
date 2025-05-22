@@ -45,6 +45,12 @@ type cField struct {
 	cTags      *cTag
 }
 
+type cStruct struct {
+	name   string
+	fields []*cField
+	fn     StructLevelFuncCtx
+}
+
 type structCache struct {
 	lock sync.Mutex
 	m    atomic.Value
