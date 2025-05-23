@@ -70,6 +70,18 @@ func (v *validate) Current() reflect.Value {
 	return v.slCurrent
 }
 
+// ReportValidationErrors reports ValidationErrors obtained from running validations within the Struct Level validation.
+// This function prepends the current namespace to the relative ones.
+func (v *validate) ReportValidationErrors(relativeNamespace, relativeStructNamespace string, errs ValidationErrors) {
+	var err *fieldError
+	for i := 0; i < len(errs); i++ {
+		err = errs[i].(*fieldError)
+		err.ns = string(append(append(v.ns, relativeNamespace...), err.ns...))
+		err.structNs = string(append(append(v.actualNs, relativeStructNamespace...), err.structNs...))
+		v.errs = append(v.errs, err)
+	}
+}
+
 // wrapStructLevelFunc wraps normal StructLevelFunc makes it compatible with StructLevelFuncCtx.
 func wrapStructLevelFunc(fn StructLevelFunc) StructLevelFuncCtx {
 	return func(ctx context.Context, sl StructLevel) {
