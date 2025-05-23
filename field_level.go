@@ -35,3 +35,19 @@ type FieldLevel interface {
 	// parent struct to start looking for the field and namespace allowing more extensibility for validators.
 	GetStructFieldOKAdvanced(val reflect.Value, namespace string) (reflect.Value, reflect.Kind, bool, bool)
 }
+
+// Param returns param for validation against current field.
+func (v *validate) Param() string {
+	return v.ct.param
+}
+
+// Field returns current field for validation.
+func (v *validate) Field() reflect.Value {
+	return v.flField
+}
+
+// FieldName returns the field's name with the
+// tag name taking precedence over the fields actual name.
+func (v *validate) FieldName() string {
+	return v.cf.altName
+}
