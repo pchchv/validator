@@ -43,6 +43,22 @@ type StructLevelFunc func(sl StructLevel)
 // contextual validation information via context.Context.
 type StructLevelFuncCtx func(ctx context.Context, sl StructLevel)
 
+// Validator returns the main validation object,
+// in case one want to call validations internally.
+func (v *validate) Validator() *Validate {
+	return v.v
+}
+
+// Top returns the top level struct.
+//
+// This can be the same as the current struct being validated if not is a nested struct.
+//
+// This is only called when within Struct and Field Level validation and
+// should not be relied upon for an accurate value otherwise.
+func (v *validate) Top() reflect.Value {
+	return v.top
+}
+
 // wrapStructLevelFunc wraps normal StructLevelFunc makes it compatible with StructLevelFuncCtx.
 func wrapStructLevelFunc(fn StructLevelFunc) StructLevelFuncCtx {
 	return func(ctx context.Context, sl StructLevel) {
