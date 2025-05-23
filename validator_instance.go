@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -28,6 +29,11 @@ const (
 	restrictedTagChars = ".[],|=+()`~!@#$%^&*\\\"/?<>{}"
 	restrictedAliasErr = "Alias '%s' either contains restricted characters or is the same as a restricted tag needed for normal operation"
 	restrictedTagErr   = "Tag '%s' either contains restricted characters or is the same as a restricted tag needed for normal operation"
+)
+
+var (
+	timeDurationType = reflect.TypeOf(time.Duration(0))
+	timeType         = reflect.TypeOf(time.Time{})
 )
 
 // TagNameFunc allows for adding of a custom tag name parser.
