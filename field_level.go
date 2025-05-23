@@ -51,3 +51,13 @@ func (v *validate) Field() reflect.Value {
 func (v *validate) FieldName() string {
 	return v.cf.altName
 }
+
+// StructFieldName returns the struct field's name.
+func (v *validate) StructFieldName() string {
+	return v.cf.name
+}
+
+// GetTag returns the current validations tag name.
+func (v *validate) GetTag() string {
+	return v.ct.tag
+}
