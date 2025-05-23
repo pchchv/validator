@@ -1,7 +1,9 @@
 package validator
 
 import (
+	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -178,4 +180,28 @@ BEGIN:
 
 	// if got here there was more namespace, cannot go any deeper
 	panic("Invalid field namespace")
+}
+
+// fieldMatchesRegexByStringerValOrString checks if field value matches regex.
+// If fl.Field can be cast to Stringer,
+// it uses the Stringer interfaces String() return value.
+// Otherwise, it uses fl.Field's String() value.
+func fieldMatchesRegexByStringerValOrString(regexFn func() *regexp.Regexp, fl FieldLevel) bool {
+	regex := regexFn()
+	switch fl.Field().Kind() {
+	case reflect.String:
+		return regex.MatchString(fl.Field().String())
+	default:
+		if stringer, ok := fl.Field().Interface().(fmt.Stringer); ok {
+			return regex.MatchString(stringer.String())
+		} else {
+			return regex.MatchString(fl.Field().String())
+		}
+	}
+}
+
+func panicIf(err error) {
+	if err != nil {
+		panic(err.Error())
+	}
 }
