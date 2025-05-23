@@ -1,6 +1,9 @@
 package validator
 
-import "context"
+import (
+	"context"
+	"reflect"
+)
 
 var restrictedTags = map[string]struct{}{
 	diveTag:           {},
@@ -34,5 +37,33 @@ func wrapFunc(fn Func) FuncCtx {
 
 	return func(ctx context.Context, fl FieldLevel) bool {
 		return fn(fl)
+	}
+}
+
+// hasValue is the validation function for validating if the current field's value is not the default static value.
+func hasValue(fl FieldLevel) bool {
+	field := fl.Field()
+	switch field.Kind() {
+	case reflect.Slice, reflect.Map, reflect.Ptr, reflect.Interface, reflect.Chan, reflect.Func:
+		return !field.IsNil()
+	default:
+		if fl.(*validate).fldIsPointer && field.Interface() != nil {
+			return true
+		}
+		return field.IsValid() && !field.IsZero()
+	}
+}
+
+// hasNotZeroValue is the validation function for validating if the current field's value is not the zero value for its type.
+func hasNotZeroValue(fl FieldLevel) bool {
+	field := fl.Field()
+	switch field.Kind() {
+	case reflect.Slice, reflect.Map, reflect.Ptr, reflect.Interface, reflect.Chan, reflect.Func:
+		return !field.IsNil()
+	default:
+		if fl.(*validate).fldIsPointer && field.Interface() != nil {
+			return !field.IsZero()
+		}
+		return field.IsValid() && !field.IsZero()
 	}
 }
