@@ -2,6 +2,8 @@ package validator
 
 import "reflect"
 
+var _ FieldLevel = new(validate)
+
 // FieldLevel contains all the information and helper functions to validate a field.
 type FieldLevel interface {
 	// Top returns the top level struct, if any
@@ -60,4 +62,15 @@ func (v *validate) StructFieldName() string {
 // GetTag returns the current validations tag name.
 func (v *validate) GetTag() string {
 	return v.ct.tag
+}
+
+// GetStructFieldOK returns Param returns param for validation against current field
+func (v *validate) GetStructFieldOK() (reflect.Value, reflect.Kind, bool, bool) {
+	return v.getStructFieldOKInternal(v.slflParent, v.ct.param)
+}
+
+// GetStructFieldOKAdvanced is the same as GetStructFieldOK except that it accepts the parent struct to start looking for
+// the field and namespace allowing more extensibility for validators.
+func (v *validate) GetStructFieldOKAdvanced(val reflect.Value, namespace string) (reflect.Value, reflect.Kind, bool, bool) {
+	return v.getStructFieldOKInternal(val, namespace)
 }
