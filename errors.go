@@ -99,6 +99,7 @@ func (e *InvalidValidationError) Error() string {
 // fieldError contains a single field's validation error along with other properties that
 // may be needed for error message creation it complies with the FieldError interface.
 type fieldError struct {
+	v              *Validate
 	tag            string
 	actualTag      string
 	ns             string
