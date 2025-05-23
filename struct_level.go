@@ -82,6 +82,59 @@ func (v *validate) ReportValidationErrors(relativeNamespace, relativeStructNames
 	}
 }
 
+// ReportError reports an error just by passing the field and tag information
+func (v *validate) ReportError(field interface{}, fieldName, structFieldName, tag, param string) {
+	fv, kind, _ := v.extractTypeInternal(reflect.ValueOf(field), false)
+	if len(structFieldName) == 0 {
+		structFieldName = fieldName
+	}
+
+	v.str1 = string(append(v.ns, fieldName...))
+	if v.v.hasTagNameFunc || fieldName != structFieldName {
+		v.str2 = string(append(v.actualNs, structFieldName...))
+	} else {
+		v.str2 = v.str1
+	}
+
+	if kind == reflect.Invalid {
+		v.errs = append(v.errs,
+			&fieldError{
+				v:              v.v,
+				tag:            tag,
+				actualTag:      tag,
+				ns:             v.str1,
+				structNs:       v.str2,
+				fieldLen:       uint8(len(fieldName)),
+				structfieldLen: uint8(len(structFieldName)),
+				param:          param,
+				kind:           kind,
+			},
+		)
+		return
+	}
+
+	v.errs = append(v.errs,
+		&fieldError{
+			v:              v.v,
+			tag:            tag,
+			actualTag:      tag,
+			ns:             v.str1,
+			structNs:       v.str2,
+			fieldLen:       uint8(len(fieldName)),
+			structfieldLen: uint8(len(structFieldName)),
+			value:          fv.Interface(),
+			param:          param,
+			kind:           kind,
+			typ:            fv.Type(),
+		},
+	)
+}
+
+// ExtractType gets the actual underlying type of field value.
+func (v *validate) ExtractType(field reflect.Value) (reflect.Value, reflect.Kind, bool) {
+	return v.extractTypeInternal(field, false)
+}
+
 // wrapStructLevelFunc wraps normal StructLevelFunc makes it compatible with StructLevelFuncCtx.
 func wrapStructLevelFunc(fn StructLevelFunc) StructLevelFuncCtx {
 	return func(ctx context.Context, sl StructLevel) {
