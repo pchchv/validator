@@ -7,6 +7,9 @@ import (
 
 // StructLevel contains all the information and helper functions to validate the structure.
 type StructLevel interface {
+	// Validator returns the main validation object, in case one wants to call validations internally.
+	// this is so you don't have to use anonymous functions to get access to the validate instance.
+	Validator() *Validate
 	// Top returns the top level struct, if any.
 	Top() reflect.Value
 	// Parent returns the current fields parent struct, if any.
