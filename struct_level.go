@@ -50,13 +50,24 @@ func (v *validate) Validator() *Validate {
 }
 
 // Top returns the top level struct.
-//
 // This can be the same as the current struct being validated if not is a nested struct.
-//
 // This is only called when within Struct and Field Level validation and
 // should not be relied upon for an accurate value otherwise.
 func (v *validate) Top() reflect.Value {
 	return v.top
+}
+
+// Parent returns the current structs parent.
+// This can be the same as the current struct being validated if not is a nested struct.
+// This is only called when within Struct and Field Level validation and
+// should not be relied upon for an accurate value otherwise.
+func (v *validate) Parent() reflect.Value {
+	return v.slflParent
+}
+
+// Current returns the current struct.
+func (v *validate) Current() reflect.Value {
+	return v.slCurrent
 }
 
 // wrapStructLevelFunc wraps normal StructLevelFunc makes it compatible with StructLevelFuncCtx.
