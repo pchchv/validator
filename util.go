@@ -235,3 +235,19 @@ func asIntFromType(t reflect.Type, param string) int64 {
 		return asInt(param)
 	}
 }
+
+// asUint returns the parameter as a uint64 or panics if it can't convert.
+func asUint(param string) uint64 {
+	i, err := strconv.ParseUint(param, 0, 64)
+	panicIf(err)
+
+	return i
+}
+
+// asBool returns the parameter as a bool or panics if it can't convert.
+func asBool(param string) bool {
+	i, err := strconv.ParseBool(param)
+	panicIf(err)
+
+	return i
+}
