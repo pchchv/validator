@@ -396,6 +396,24 @@ func isCIDRv6(fl FieldLevel) bool {
 	return err == nil && ip.To4() == nil
 }
 
+// isMAC is the validation function for validating if the
+// field's value is a valid MAC address.
+func isMAC(fl FieldLevel) bool {
+	_, err := net.ParseMAC(fl.Field().String())
+	return err == nil
+}
+
+// isSSN is the validation function for validating if the
+// field's value is a valid SSN.
+func isSSN(fl FieldLevel) bool {
+	field := fl.Field()
+	if field.Len() != 11 {
+		return false
+	}
+
+	return sSNRegex().MatchString(field.String())
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
