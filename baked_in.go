@@ -414,6 +414,123 @@ func isSSN(fl FieldLevel) bool {
 	return sSNRegex().MatchString(field.String())
 }
 
+// isUnique is the validation function for validating if each array|slice|map value is unique
+func isUnique(fl FieldLevel) bool {
+	field := fl.Field()
+	param := fl.Param()
+	v := reflect.ValueOf(struct{}{})
+	switch field.Kind() {
+	case reflect.Slice, reflect.Array:
+		elem := field.Type().Elem()
+		if elem.Kind() == reflect.Ptr {
+			elem = elem.Elem()
+		}
+
+		if param == "" {
+			m := reflect.MakeMap(reflect.MapOf(elem, v.Type()))
+			for i := 0; i < field.Len(); i++ {
+				m.SetMapIndex(reflect.Indirect(field.Index(i)), v)
+			}
+
+			return field.Len() == m.Len()
+		}
+
+		sf, ok := elem.FieldByName(param)
+		if !ok {
+			panic(fmt.Sprintf("Bad field name %s", param))
+		}
+
+		sfTyp := sf.Type
+		if sfTyp.Kind() == reflect.Ptr {
+			sfTyp = sfTyp.Elem()
+		}
+
+		var fieldlen int
+		m := reflect.MakeMap(reflect.MapOf(sfTyp, v.Type()))
+		for i := 0; i < field.Len(); i++ {
+			key := reflect.Indirect(reflect.Indirect(field.Index(i)).FieldByName(param))
+			if key.IsValid() {
+				fieldlen++
+				m.SetMapIndex(key, v)
+			}
+		}
+
+		return fieldlen == m.Len()
+	case reflect.Map:
+		var m reflect.Value
+		if field.Type().Elem().Kind() == reflect.Ptr {
+			m = reflect.MakeMap(reflect.MapOf(field.Type().Elem().Elem(), v.Type()))
+		} else {
+			m = reflect.MakeMap(reflect.MapOf(field.Type().Elem(), v.Type()))
+		}
+
+		for _, k := range field.MapKeys() {
+			m.SetMapIndex(reflect.Indirect(field.MapIndex(k)), v)
+		}
+
+		return field.Len() == m.Len()
+	default:
+		if parent := fl.Parent(); parent.Kind() == reflect.Struct {
+			uniqueField := parent.FieldByName(param)
+			if uniqueField == reflect.ValueOf(nil) {
+				panic(fmt.Sprintf("Bad field name provided %s", param))
+			}
+
+			if uniqueField.Kind() != field.Kind() {
+				panic(fmt.Sprintf("Bad field type %T:%T", field.Interface(), uniqueField.Interface()))
+			}
+
+			return field.Interface() != uniqueField.Interface()
+		}
+
+		panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+	}
+}
+
+// isLongitude is the validation function for validating if the field's value is a valid longitude coordinate.
+func isLongitude(fl FieldLevel) bool {
+	var v string
+	field := fl.Field()
+	switch field.Kind() {
+	case reflect.String:
+		v = field.String()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		v = strconv.FormatInt(field.Int(), 10)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		v = strconv.FormatUint(field.Uint(), 10)
+	case reflect.Float32:
+		v = strconv.FormatFloat(field.Float(), 'f', -1, 32)
+	case reflect.Float64:
+		v = strconv.FormatFloat(field.Float(), 'f', -1, 64)
+	default:
+		panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+	}
+
+	return longitudeRegex().MatchString(v)
+}
+
+// isLatitude is the validation function for validating if the field's value is a valid latitude coordinate.
+func isLatitude(fl FieldLevel) bool {
+	var v string
+	field := fl.Field()
+	switch field.Kind() {
+	case reflect.String:
+		v = field.String()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		v = strconv.FormatInt(field.Int(), 10)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		v = strconv.FormatUint(field.Uint(), 10)
+	case reflect.Float32:
+		v = strconv.FormatFloat(field.Float(), 'f', -1, 32)
+	case reflect.Float64:
+		v = strconv.FormatFloat(field.Float(), 'f', -1, 64)
+	default:
+		panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+	}
+
+	return latitudeRegex().MatchString(v)
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
