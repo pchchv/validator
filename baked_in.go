@@ -134,6 +134,63 @@ func requiredIf(fl FieldLevel) bool {
 	return hasValue(fl)
 }
 
+// requireCheckFieldKind is a func for check field kind.
+func requireCheckFieldKind(fl FieldLevel, param string, defaultNotFoundValue bool) bool {
+	var nullable, found bool
+	field := fl.Field()
+	kind := field.Kind()
+	if len(param) > 0 {
+		field, kind, nullable, found = fl.GetStructFieldOKAdvanced(fl.Parent(), param)
+		if !found {
+			return defaultNotFoundValue
+		}
+	}
+
+	switch kind {
+	case reflect.Invalid:
+		return defaultNotFoundValue
+	case reflect.Slice, reflect.Map, reflect.Ptr, reflect.Interface, reflect.Chan, reflect.Func:
+		return field.IsNil()
+	default:
+		if nullable && field.Interface() != nil {
+			return false
+		}
+
+		return field.IsValid() && field.IsZero()
+	}
+}
+
+// requiredUnless is the validation function.
+// The field under validation must be present and not empty only unless all the
+// other specified fields are equal to the value following with the specified field.
+func requiredUnless(fl FieldLevel) bool {
+	params := parseOneOfParam(fl.Param())
+	if len(params)%2 != 0 {
+		panic(fmt.Sprintf("Bad param number for required_unless %s", fl.FieldName()))
+	}
+
+	for i := 0; i < len(params); i += 2 {
+		if requireCheckFieldValue(fl, params[i], params[i+1], false) {
+			return true
+		}
+	}
+
+	return hasValue(fl)
+}
+
+// requiredWith is the validation function.
+// The field under validation must be present and not empty only if any of the
+// other specified fields are present.
+func requiredWith(fl FieldLevel) bool {
+	params := parseOneOfParam(fl.Param())
+	for _, param := range params {
+		if !requireCheckFieldKind(fl, param, true) {
+			return hasValue(fl)
+		}
+	}
+	return true
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
