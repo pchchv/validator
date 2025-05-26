@@ -608,6 +608,21 @@ func isULID(fl FieldLevel) bool {
 	return fieldMatchesRegexByStringerValOrString(uLIDRegex, fl)
 }
 
+// isSHA256 is the validation function for validating if the field's value is a valid SHA256.
+func isSHA256(fl FieldLevel) bool {
+	return sha256Regex().MatchString(fl.Field().String())
+}
+
+// isSHA384 is the validation function for validating if the field's value is a valid SHA384.
+func isSHA384(fl FieldLevel) bool {
+	return sha384Regex().MatchString(fl.Field().String())
+}
+
+// isSHA512 is the validation function for validating if the field's value is a valid SHA512.
+func isSHA512(fl FieldLevel) bool {
+	return sha512Regex().MatchString(fl.Field().String())
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
