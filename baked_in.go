@@ -623,6 +623,16 @@ func isSHA512(fl FieldLevel) bool {
 	return sha512Regex().MatchString(fl.Field().String())
 }
 
+// isMD4 is the validation function for validating if the field's value is a valid MD4.
+func isMD4(fl FieldLevel) bool {
+	return md4Regex().MatchString(fl.Field().String())
+}
+
+// isMD5 is the validation function for validating if the field's value is a valid MD5.
+func isMD5(fl FieldLevel) bool {
+	return md5Regex().MatchString(fl.Field().String())
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
