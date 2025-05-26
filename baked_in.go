@@ -554,6 +554,30 @@ func isPrintableASCII(fl FieldLevel) bool {
 	return printableASCIIRegex().MatchString(fl.Field().String())
 }
 
+// isUUID is the validation function for validating if the
+// field's value is a valid UUID of any version.
+func isUUID(fl FieldLevel) bool {
+	return fieldMatchesRegexByStringerValOrString(uUIDRegex, fl)
+}
+
+// isUUID3 is the validation function for validating if the
+// field's value is a valid v3 UUID.
+func isUUID3(fl FieldLevel) bool {
+	return fieldMatchesRegexByStringerValOrString(uUID3Regex, fl)
+}
+
+// isUUID4 is the validation function for validating if the
+// field's value is a valid v4 UUID.
+func isUUID4(fl FieldLevel) bool {
+	return fieldMatchesRegexByStringerValOrString(uUID4Regex, fl)
+}
+
+// isUUID5 is the validation function for validating if the
+// field's value is a valid v5 UUID.
+func isUUID5(fl FieldLevel) bool {
+	return fieldMatchesRegexByStringerValOrString(uUID5Regex, fl)
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
