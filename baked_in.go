@@ -531,6 +531,29 @@ func isLatitude(fl FieldLevel) bool {
 	return latitudeRegex().MatchString(v)
 }
 
+// isDataURI is the validation function for validating if the
+// field's value is a valid data URI.
+func isDataURI(fl FieldLevel) bool {
+	uri := strings.SplitN(fl.Field().String(), ",", 2)
+	if len(uri) != 2 || !dataURIRegex().MatchString(uri[0]) {
+		return false
+	}
+
+	return base64Regex().MatchString(uri[1])
+}
+
+// isASCII is the validation function for validating if the
+// field's value is a valid ASCII character.
+func isASCII(fl FieldLevel) bool {
+	return aSCIIRegex().MatchString(fl.Field().String())
+}
+
+// isPrintableASCII is the validation function for validating if the
+// field's value is a valid printable ASCII character.
+func isPrintableASCII(fl FieldLevel) bool {
+	return printableASCIIRegex().MatchString(fl.Field().String())
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
