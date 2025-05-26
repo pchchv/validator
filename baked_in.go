@@ -375,6 +375,27 @@ func isIPv6(fl FieldLevel) bool {
 	return ip != nil && ip.To4() == nil
 }
 
+// isCIDR is the validation function for validating if the
+// field's value is a valid v4 or v6 CIDR address.
+func isCIDR(fl FieldLevel) bool {
+	_, _, err := net.ParseCIDR(fl.Field().String())
+	return err == nil
+}
+
+// isCIDRv4 is the validation function for validating if the
+// field's value is a valid v4 CIDR address.
+func isCIDRv4(fl FieldLevel) bool {
+	ip, net, err := net.ParseCIDR(fl.Field().String())
+	return err == nil && ip.To4() != nil && net.IP.Equal(ip)
+}
+
+// isCIDRv6 is the validation function for validating if the
+// field's value is a valid v6 CIDR address.
+func isCIDRv6(fl FieldLevel) bool {
+	ip, _, err := net.ParseCIDR(fl.Field().String())
+	return err == nil && ip.To4() == nil
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
