@@ -578,6 +578,30 @@ func isUUID5(fl FieldLevel) bool {
 	return fieldMatchesRegexByStringerValOrString(uUID5Regex, fl)
 }
 
+// isUUIDRFC4122 is the validation function for validating if the
+// field's value is a valid RFC4122 UUID of any version.
+func isUUIDRFC4122(fl FieldLevel) bool {
+	return fieldMatchesRegexByStringerValOrString(uUIDRFC4122Regex, fl)
+}
+
+// isUUID3RFC4122 is the validation function for validating if the
+// field's value is a valid RFC4122 v3 UUID.
+func isUUID3RFC4122(fl FieldLevel) bool {
+	return fieldMatchesRegexByStringerValOrString(uUID3RFC4122Regex, fl)
+}
+
+// isUUID4RFC4122 is the validation function for validating if the
+// field's value is a valid RFC4122 v4 UUID.
+func isUUID4RFC4122(fl FieldLevel) bool {
+	return fieldMatchesRegexByStringerValOrString(uUID4RFC4122Regex, fl)
+}
+
+// isUUID5RFC4122 is the validation function for validating if the
+// field's value is a valid RFC4122 v5 UUID.
+func isUUID5RFC4122(fl FieldLevel) bool {
+	return fieldMatchesRegexByStringerValOrString(uUID5RFC4122Regex, fl)
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
