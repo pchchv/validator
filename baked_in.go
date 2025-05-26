@@ -297,6 +297,7 @@ func hasLuhnChecksum(fl FieldLevel) bool {
 	digits := strings.Split(str, "")
 	return digitsHaveLuhnChecksum(digits)
 }
+
 func isOneOf(fl FieldLevel) bool {
 	var v string
 	vals := parseOneOfParam(fl.Param())
@@ -339,6 +340,18 @@ func isOneOfCI(fl FieldLevel) bool {
 	}
 
 	return false
+}
+
+func isHTML(fl FieldLevel) bool {
+	return hTMLRegex().MatchString(fl.Field().String())
+}
+
+func isURLEncoded(fl FieldLevel) bool {
+	return uRLEncodedRegex().MatchString(fl.Field().String())
+}
+
+func isHTMLEncoded(fl FieldLevel) bool {
+	return hTMLEncodedRegex().MatchString(fl.Field().String())
 }
 
 // hasValue is the validation function for validating if the current field's value is not the default static value.
