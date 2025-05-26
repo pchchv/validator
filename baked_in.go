@@ -663,6 +663,50 @@ func isTIGER192(fl FieldLevel) bool {
 	return tiger192Regex().MatchString(fl.Field().String())
 }
 
+// isISBN is the validation function for validating if the
+// field's value is a valid v10 or v13 ISBN.
+func isISBN(fl FieldLevel) bool {
+	return isISBN10(fl) || isISBN13(fl)
+}
+
+// isISBN10 is the validation function for validating if the
+// field's value is a valid v10 ISBN.
+func isISBN10(fl FieldLevel) bool {
+	s := strings.Replace(strings.Replace(fl.Field().String(), "-", "", 3), " ", "", 3)
+	if !iSBN10Regex().MatchString(s) {
+		return false
+	}
+
+	var i, checksum int32
+	for i = 0; i < 9; i++ {
+		checksum += (i + 1) * int32(s[i]-'0')
+	}
+
+	if s[9] == 'X' {
+		checksum += 10 * 10
+	} else {
+		checksum += 10 * int32(s[9]-'0')
+	}
+
+	return checksum%11 == 0
+}
+
+// isISBN13 is the validation function for validating if the field's value is a valid v13 ISBN.
+func isISBN13(fl FieldLevel) bool {
+	s := strings.Replace(strings.Replace(fl.Field().String(), "-", "", 4), " ", "", 4)
+	if !iSBN13Regex().MatchString(s) {
+		return false
+	}
+
+	var i, checksum int32
+	factor := []int32{1, 3}
+	for i = 0; i < 12; i++ {
+		checksum += factor[i%2] * int32(s[i]-'0')
+	}
+
+	return (int32(s[12]-'0'))-((10-(checksum%10))%10) == 0
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
