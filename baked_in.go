@@ -602,6 +602,12 @@ func isUUID5RFC4122(fl FieldLevel) bool {
 	return fieldMatchesRegexByStringerValOrString(uUID5RFC4122Regex, fl)
 }
 
+// isULID is the validation function for validating if the
+// field's value is a valid ULID.
+func isULID(fl FieldLevel) bool {
+	return fieldMatchesRegexByStringerValOrString(uLIDRegex, fl)
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
