@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"fmt"
+	"net"
 	"reflect"
 	"strconv"
 	"strings"
@@ -352,6 +353,26 @@ func isURLEncoded(fl FieldLevel) bool {
 
 func isHTMLEncoded(fl FieldLevel) bool {
 	return hTMLEncodedRegex().MatchString(fl.Field().String())
+}
+
+// isIP is the validation function for validating if the
+// field's value is a valid v4 or v6 IP address.
+func isIP(fl FieldLevel) bool {
+	ip := net.ParseIP(fl.Field().String())
+	return ip != nil
+}
+
+// isIPv4 is the validation function for validating if a value is a valid v4 IP address.
+func isIPv4(fl FieldLevel) bool {
+	ip := net.ParseIP(fl.Field().String())
+	return ip != nil && ip.To4() != nil
+}
+
+// isIPv6 is the validation function for validating if the
+// field's value is a valid v6 IP address.
+func isIPv6(fl FieldLevel) bool {
+	ip := net.ParseIP(fl.Field().String())
+	return ip != nil && ip.To4() == nil
 }
 
 // hasValue is the validation function for validating if the current field's value is not the default static value.
