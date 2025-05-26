@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -228,6 +229,73 @@ func requiredWithoutAll(fl FieldLevel) bool {
 		}
 	}
 	return hasValue(fl)
+}
+
+// digitsHaveLuhnChecksum returns true if and only if the last element of the
+// given digits slice is the Luhn checksum of the previous elements.
+func digitsHaveLuhnChecksum(digits []string) bool {
+	var sum int
+	size := len(digits)
+	for i, digit := range digits {
+		value, err := strconv.Atoi(digit)
+		if err != nil {
+			return false
+		}
+
+		if size%2 == 0 && i%2 == 0 || size%2 == 1 && i%2 == 1 {
+			v := value * 2
+			if v >= 10 {
+				sum += 1 + (v % 10)
+			} else {
+				sum += v
+			}
+		} else {
+			sum += value
+		}
+	}
+	return (sum % 10) == 0
+}
+
+// skipUnless is the validation function.
+// The field under validation must be present and not empty only unless all the
+// other specified fields are equal to the value following with the specified field.
+func skipUnless(fl FieldLevel) bool {
+	params := parseOneOfParam(fl.Param())
+	if len(params)%2 != 0 {
+		panic(fmt.Sprintf("Bad param number for skip_unless %s", fl.FieldName()))
+	}
+
+	for i := 0; i < len(params); i += 2 {
+		if !requireCheckFieldValue(fl, params[i], params[i+1], false) {
+			return true
+		}
+	}
+
+	return hasValue(fl)
+}
+
+// hasLuhnChecksum is the validation for validating if the current field's value has a valid Luhn checksum.
+func hasLuhnChecksum(fl FieldLevel) bool {
+	field := fl.Field()
+	var str string // convert to a string which will then be split into single digits; easier and more readable than shifting/extracting single digits from a number
+	switch field.Kind() {
+	case reflect.String:
+		str = field.String()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		str = strconv.FormatInt(field.Int(), 10)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		str = strconv.FormatUint(field.Uint(), 10)
+	default:
+		panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+	}
+
+	size := len(str)
+	if size < 2 { // there has to be at least one digit that carries a meaning + the checksum
+		return false
+	}
+
+	digits := strings.Split(str, "")
+	return digitsHaveLuhnChecksum(digits)
 }
 
 // hasValue is the validation function for validating if the current field's value is not the default static value.
