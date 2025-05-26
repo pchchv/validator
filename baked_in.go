@@ -707,6 +707,30 @@ func isISBN13(fl FieldLevel) bool {
 	return (int32(s[12]-'0'))-((10-(checksum%10))%10) == 0
 }
 
+// isISSN is the validation function for validating if the
+// field's value is a valid ISSN.
+func isISSN(fl FieldLevel) bool {
+	s := fl.Field().String()
+	if !iSSNRegex().MatchString(s) {
+		return false
+	}
+
+	var pos, checksum int
+	s = strings.ReplaceAll(s, "-", "")
+	for i := 0; i < 7; i++ {
+		checksum += pos * int(s[i]-'0')
+		pos--
+	}
+
+	if s[7] == 'X' {
+		checksum += 10
+	} else {
+		checksum += int(s[7] - '0')
+	}
+
+	return checksum%11 == 0
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
