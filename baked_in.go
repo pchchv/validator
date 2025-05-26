@@ -633,6 +633,36 @@ func isMD5(fl FieldLevel) bool {
 	return md5Regex().MatchString(fl.Field().String())
 }
 
+// isRIPEMD128 is the validation function for validating if the
+// field's value is a valid PIPEMD128.
+func isRIPEMD128(fl FieldLevel) bool {
+	return ripemd128Regex().MatchString(fl.Field().String())
+}
+
+// isRIPEMD160 is the validation function for validating if the
+// field's value is a valid PIPEMD160.
+func isRIPEMD160(fl FieldLevel) bool {
+	return ripemd160Regex().MatchString(fl.Field().String())
+}
+
+// isTIGER128 is the validation function for validating if the
+// field's value is a valid TIGER128.
+func isTIGER128(fl FieldLevel) bool {
+	return tiger128Regex().MatchString(fl.Field().String())
+}
+
+// isTIGER160 is the validation function for validating if the
+// field's value is a valid TIGER160.
+func isTIGER160(fl FieldLevel) bool {
+	return tiger160Regex().MatchString(fl.Field().String())
+}
+
+// isTIGER192 is the validation function for validating if the
+// field's value is a valid isTIGER192.
+func isTIGER192(fl FieldLevel) bool {
+	return tiger192Regex().MatchString(fl.Field().String())
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
