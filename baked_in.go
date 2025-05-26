@@ -191,6 +191,45 @@ func requiredWith(fl FieldLevel) bool {
 	return true
 }
 
+// requiredWithAll is the validation function.
+// The field under validation must be present and not empty only if all of the
+// other specified fields are present.
+func requiredWithAll(fl FieldLevel) bool {
+	params := parseOneOfParam(fl.Param())
+	for _, param := range params {
+		if requireCheckFieldKind(fl, param, true) {
+			return true
+		}
+	}
+	return hasValue(fl)
+}
+
+// requiredWithout is the validation function.
+// The field under validation must be present and not empty only when any of the
+// other specified fields are not present.
+func requiredWithout(fl FieldLevel) bool {
+	params := parseOneOfParam(fl.Param())
+	for _, param := range params {
+		if requireCheckFieldKind(fl, param, true) {
+			return hasValue(fl)
+		}
+	}
+	return true
+}
+
+// requiredWithoutAll is the validation function.
+// The field under validation must be present and not empty only when all of the
+// other specified fields are not present.
+func requiredWithoutAll(fl FieldLevel) bool {
+	params := parseOneOfParam(fl.Param())
+	for _, param := range params {
+		if !requireCheckFieldKind(fl, param, true) {
+			return true
+		}
+	}
+	return hasValue(fl)
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
