@@ -992,6 +992,52 @@ func isEqField(fl FieldLevel) bool {
 	return field.String() == currentField.String()
 }
 
+// isNe is the validation function for validating that the
+// field's value does not equal the provided param value.
+func isNe(fl FieldLevel) bool {
+	return !isEq(fl)
+}
+
+// isNeField is the validation function for validating if the
+// current field's value is not equal to the
+// field specified by the param's value.
+func isNeField(fl FieldLevel) bool {
+	field := fl.Field()
+	kind := field.Kind()
+	currentField, currentKind, _, ok := fl.GetStructFieldOK()
+	if !ok || currentKind != kind {
+		return true
+	}
+
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return field.Int() != currentField.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return field.Uint() != currentField.Uint()
+	case reflect.Float32, reflect.Float64:
+		return field.Float() != currentField.Float()
+	case reflect.Slice, reflect.Map, reflect.Array:
+		return int64(field.Len()) != int64(currentField.Len())
+	case reflect.Bool:
+		return field.Bool() != currentField.Bool()
+	case reflect.Struct:
+		fieldType := field.Type()
+		if fieldType.ConvertibleTo(timeType) && currentField.Type().ConvertibleTo(timeType) {
+			t := currentField.Interface().(time.Time)
+			fieldTime := field.Interface().(time.Time)
+			return !fieldTime.Equal(t)
+		}
+
+		// Not Same underlying type i.e. struct and time
+		if fieldType != currentField.Type() {
+			return true
+		}
+	}
+
+	// default reflect.String:
+	return field.String() != currentField.String()
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
