@@ -1428,6 +1428,73 @@ func isDirPath(fl FieldLevel) bool {
 	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
 }
 
+// isFile is the validation function for validating if the
+// current field's value is a valid existing file path.
+func isFile(fl FieldLevel) bool {
+	field := fl.Field()
+	switch field.Kind() {
+	case reflect.String:
+		fileInfo, err := os.Stat(field.String())
+		if err != nil {
+			return false
+		}
+
+		return !fileInfo.IsDir()
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+// isFilePath is the validation function for validating if the
+// current field's value is a valid file path.
+func isFilePath(fl FieldLevel) bool {
+	var exists bool
+	var err error
+	field := fl.Field()
+
+	// not valid if it is a directory
+	if isDir(fl) {
+		return false
+	}
+	// if it exists, it obviously is valid
+	// this is done first to avoid code duplication and unnecessary additional logic
+	if exists = isFile(fl); exists {
+		return true
+	}
+
+	// it does not exist but may still be a valid filepath
+	switch field.Kind() {
+	case reflect.String:
+		// every OS allows for whitespace,
+		// but none let you use a file with no filename (to my knowledge)
+		// unless you're dealing with raw inodes, but I digress
+		if strings.TrimSpace(field.String()) == "" {
+			return false
+		}
+		// make sure it isn't a directory
+		if strings.HasSuffix(field.String(), string(os.PathSeparator)) {
+			return false
+		}
+
+		if _, err = os.Stat(field.String()); err != nil {
+			switch t := err.(type) {
+			case *fs.PathError:
+				if t.Err == syscall.EINVAL {
+					// it's definitely an invalid character in the filepath.
+					return false
+				}
+				// it could be a permission error, a does-not-exist error, etc.
+				// out-of-scope for this validation, though
+				return true
+			default:
+				panic(err)
+			}
+		}
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
