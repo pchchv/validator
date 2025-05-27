@@ -1572,6 +1572,40 @@ func isEmail(fl FieldLevel) bool {
 	return emailRegex().MatchString(fl.Field().String())
 }
 
+// isNumber is the validation function for validating if the
+// current field's value is a valid number.
+func isNumber(fl FieldLevel) bool {
+	switch fl.Field().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Float32, reflect.Float64:
+		return true
+	default:
+		return numberRegex().MatchString(fl.Field().String())
+	}
+}
+
+// isNumeric is the validation function for validating if the
+// current field's value is a valid numeric value.
+func isNumeric(fl FieldLevel) bool {
+	switch fl.Field().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Float32, reflect.Float64:
+		return true
+	default:
+		return numericRegex().MatchString(fl.Field().String())
+	}
+}
+
+// isHSL is the validation function for validating if the
+// current field's value is a valid HSL color.
+func isHSL(fl FieldLevel) bool {
+	return hslRegex().MatchString(fl.Field().String())
+}
+
+// isHSLA is the validation function for validating if the
+// current field's value is a valid HSLA color.
+func isHSLA(fl FieldLevel) bool {
+	return hslaRegex().MatchString(fl.Field().String())
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
