@@ -1239,6 +1239,26 @@ func isNeCrossStructField(fl FieldLevel) bool {
 	return topField.String() != field.String()
 }
 
+// isBase32 is the validation function for validating if the current field's value is a valid base 32.
+func isBase32(fl FieldLevel) bool {
+	return base32Regex().MatchString(fl.Field().String())
+}
+
+// isBase64 is the validation function for validating if the current field's value is a valid base 64.
+func isBase64(fl FieldLevel) bool {
+	return base64Regex().MatchString(fl.Field().String())
+}
+
+// isBase64URL is the validation function for validating if the current field's value is a valid base64 URL safe string.
+func isBase64URL(fl FieldLevel) bool {
+	return base64URLRegex().MatchString(fl.Field().String())
+}
+
+// isBase64RawURL is the validation function for validating if the current field's value is a valid base64 URL safe string without '=' padding.
+func isBase64RawURL(fl FieldLevel) bool {
+	return base64RawURLRegex().MatchString(fl.Field().String())
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
