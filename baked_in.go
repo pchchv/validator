@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"golang.org/x/crypto/sha3"
 )
@@ -909,6 +910,86 @@ func isEqIgnoreCase(fl FieldLevel) bool {
 	default:
 		panic(fmt.Sprintf("Bad field type %T", field.Interface()))
 	}
+}
+
+// isEqCrossStructField is the validation function for validating that the
+// current field's value is equal to the field, within a separate struct,
+// specified by the param's value.
+func isEqCrossStructField(fl FieldLevel) bool {
+	field := fl.Field()
+	kind := field.Kind()
+	topField, topKind, _, ok := fl.GetStructFieldOK()
+	if !ok || topKind != kind {
+		return false
+	}
+
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return topField.Int() == field.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return topField.Uint() == field.Uint()
+	case reflect.Float32, reflect.Float64:
+		return topField.Float() == field.Float()
+	case reflect.Slice, reflect.Map, reflect.Array:
+		return int64(topField.Len()) == int64(field.Len())
+	case reflect.Bool:
+		return topField.Bool() == field.Bool()
+	case reflect.Struct:
+		fieldType := field.Type()
+		if fieldType.ConvertibleTo(timeType) && topField.Type().ConvertibleTo(timeType) {
+			t := field.Convert(timeType).Interface().(time.Time)
+			fieldTime := topField.Convert(timeType).Interface().(time.Time)
+			return fieldTime.Equal(t)
+		}
+
+		// not Same underlying type i. e. struct and time
+		if fieldType != topField.Type() {
+			return false
+		}
+	}
+
+	// default reflect.String:
+	return topField.String() == field.String()
+}
+
+// isEqField is the validation function for validating if the
+// current field's value is equal to the
+// field specified by the param's value.
+func isEqField(fl FieldLevel) bool {
+	field := fl.Field()
+	kind := field.Kind()
+	currentField, currentKind, _, ok := fl.GetStructFieldOK()
+	if !ok || currentKind != kind {
+		return false
+	}
+
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return field.Int() == currentField.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return field.Uint() == currentField.Uint()
+	case reflect.Float32, reflect.Float64:
+		return field.Float() == currentField.Float()
+	case reflect.Slice, reflect.Map, reflect.Array:
+		return int64(field.Len()) == int64(currentField.Len())
+	case reflect.Bool:
+		return field.Bool() == currentField.Bool()
+	case reflect.Struct:
+		fieldType := field.Type()
+		if fieldType.ConvertibleTo(timeType) && currentField.Type().ConvertibleTo(timeType) {
+			t := currentField.Convert(timeType).Interface().(time.Time)
+			fieldTime := field.Convert(timeType).Interface().(time.Time)
+			return fieldTime.Equal(t)
+		}
+
+		// not Same underlying type i.e. struct and time
+		if fieldType != currentField.Type() {
+			return false
+		}
+	}
+
+	// default reflect.String:
+	return field.String() == currentField.String()
 }
 
 // hasValue is the validation function for validating if the current field's value is not the default static value.
