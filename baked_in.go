@@ -25,6 +25,7 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 	urn "github.com/leodido/go-urn"
 	"golang.org/x/crypto/sha3"
+	"golang.org/x/text/language"
 )
 
 var (
@@ -1988,6 +1989,45 @@ func isIso4217Numeric(fl FieldLevel) bool {
 func isIsoBicFormat(fl FieldLevel) bool {
 	bicString := fl.Field().String()
 	return bicRegex().MatchString(bicString)
+}
+
+// isBCP47LanguageTag is the validation function for validating if the
+// current field's value is a valid BCP 47 language tag, as parsed by language.Parse.
+func isBCP47LanguageTag(fl FieldLevel) bool {
+	field := fl.Field()
+	if field.Kind() == reflect.String {
+		_, err := language.Parse(field.String())
+		return err == nil
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+// isSemverFormat is the validation function for validating if the
+// current field's value is a valid semver version, defined in Semantic Versioning 2.0.0.
+func isSemverFormat(fl FieldLevel) bool {
+	semverString := fl.Field().String()
+	return semverRegex().MatchString(semverString)
+}
+
+// isCveFormat is the validation function for validating if the
+// current field's value is a valid cve id, defined in CVE mitre org.
+func isCveFormat(fl FieldLevel) bool {
+	cveString := fl.Field().String()
+	return cveRegex().MatchString(cveString)
+}
+
+// isDnsRFC1035LabelFormat is the validation function
+// for validating if the current field's value is
+// a valid dns RFC 1035 label, defined in RFC 1035.
+func isDnsRFC1035LabelFormat(fl FieldLevel) bool {
+	val := fl.Field().String()
+	size := len(val)
+	if size > 63 {
+		return false
+	}
+
+	return dnsRegexRFC1035Label().MatchString(val)
 }
 
 // hasValue is the validation function for validating if the current field's value is not the default static value.
