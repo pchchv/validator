@@ -1,7 +1,9 @@
 package validator
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"net"
 	"reflect"
@@ -729,6 +731,102 @@ func isISSN(fl FieldLevel) bool {
 	}
 
 	return checksum%11 == 0
+}
+
+// isBitcoinAddress is the validation function for validating if the
+// field's value is a valid btc address.
+func isBitcoinAddress(fl FieldLevel) bool {
+	address := fl.Field().String()
+	if !btcAddressRegex().MatchString(address) {
+		return false
+	}
+
+	decode := [25]byte{}
+	alphabet := []byte("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
+	for _, n := range []byte(address) {
+		d := bytes.IndexByte(alphabet, n)
+		for i := 24; i >= 0; i-- {
+			d += 58 * int(decode[i])
+			decode[i] = byte(d % 256)
+			d /= 256
+		}
+	}
+
+	h := sha256.New()
+	_, _ = h.Write(decode[:21])
+	d := h.Sum([]byte{})
+	h = sha256.New()
+	_, _ = h.Write(d)
+	validchecksum := [4]byte{}
+	computedchecksum := [4]byte{}
+	copy(computedchecksum[:], h.Sum(d[:0]))
+	copy(validchecksum[:], decode[21:])
+	return validchecksum == computedchecksum
+}
+
+// isBitcoinBech32Address is the validation function for validating if the
+// field's value is a valid bech32 btc address.
+func isBitcoinBech32Address(fl FieldLevel) bool {
+	address := fl.Field().String()
+	if !btcLowerAddressRegexBech32().MatchString(address) && !btcUpperAddressRegexBech32().MatchString(address) {
+		return false
+	}
+
+	am := len(address) % 8
+	if am == 0 || am == 3 || am == 5 {
+		return false
+	}
+
+	address = strings.ToLower(address)
+	alphabet := "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
+	hr := []int{3, 3, 0, 2, 3} // the human readable part will always be bc
+	addr := address[3:]
+	dp := make([]int, 0, len(addr))
+	for _, c := range addr {
+		dp = append(dp, strings.IndexRune(alphabet, c))
+	}
+
+	ver := dp[0]
+	if ver < 0 || ver > 16 || (ver == 0 && len(address) != 42 && len(address) != 62) {
+		return false
+	}
+
+	p := 1
+	values := append(hr, dp...)
+	GEN := []int{0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3}
+	for _, v := range values {
+		b := p >> 25
+		p = (p&0x1ffffff)<<5 ^ v
+
+		for i := 0; i < 5; i++ {
+			if (b>>uint(i))&1 == 1 {
+				p ^= GEN[i]
+			}
+		}
+	}
+
+	if p != 1 {
+		return false
+	}
+
+	var acc int
+	var sw []int
+	b := uint(0)
+	mv := (1 << 5) - 1
+	for _, v := range dp[1 : len(dp)-6] {
+		acc = (acc << 5) | v
+		b += 5
+		for b >= 8 {
+			b -= 8
+			sw = append(sw, (acc>>b)&mv)
+		}
+	}
+
+	if len(sw) < 2 || len(sw) > 40 {
+		return false
+	}
+
+	return true
 }
 
 // hasValue is the validation function for validating if the current field's value is not the default static value.
