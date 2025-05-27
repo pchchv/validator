@@ -1624,6 +1624,30 @@ func isHEXColor(fl FieldLevel) bool {
 	return hexColorRegex().MatchString(fl.Field().String())
 }
 
+// isAlpha is the validation function for validating if the
+// current field's value is a valid alpha value.
+func isAlpha(fl FieldLevel) bool {
+	return alphaRegex().MatchString(fl.Field().String())
+}
+
+// isAlphanum is the validation function for validating if the
+// current field's value is a valid alphanumeric value.
+func isAlphanum(fl FieldLevel) bool {
+	return alphaNumericRegex().MatchString(fl.Field().String())
+}
+
+// isAlphanumUnicode is the validation function for validating if the
+// current field's value is a valid alphanumeric unicode value.
+func isAlphanumUnicode(fl FieldLevel) bool {
+	return alphaUnicodeNumericRegex().MatchString(fl.Field().String())
+}
+
+// isAlphaUnicode is the validation function for validating if the
+// current field's value is a valid alpha unicode value.
+func isAlphaUnicode(fl FieldLevel) bool {
+	return alphaUnicodeRegex().MatchString(fl.Field().String())
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
