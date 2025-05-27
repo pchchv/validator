@@ -1872,6 +1872,124 @@ func isJSON(fl FieldLevel) bool {
 	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
 }
 
+// isIso3166Alpha2 is the validation function for validating if the
+// current field's value is a valid iso3166-1 alpha-2 country code.
+func isIso3166Alpha2(fl FieldLevel) bool {
+	_, ok := iso3166_1_alpha2[fl.Field().String()]
+	return ok
+}
+
+// isIso3166Alpha2EU is the validation function for validating if the
+// current field's value is a valid iso3166-1 alpha-2 European Union country code.
+func isIso3166Alpha2EU(fl FieldLevel) bool {
+	_, ok := iso3166_1_alpha2_eu[fl.Field().String()]
+	return ok
+}
+
+// isIso3166Alpha3 is the validation function for validating if the
+// current field's value is a valid iso3166-1 alpha-3 country code.
+func isIso3166Alpha3(fl FieldLevel) bool {
+	_, ok := iso3166_1_alpha3[fl.Field().String()]
+	return ok
+}
+
+// isIso3166Alpha3EU is the validation function for validating if the
+// current field's value is a valid iso3166-1 alpha-3 European Union country code.
+func isIso3166Alpha3EU(fl FieldLevel) bool {
+	_, ok := iso3166_1_alpha3_eu[fl.Field().String()]
+	return ok
+}
+
+// isIso3166AlphaNumeric is the validation function for validating if the
+// current field's value is a valid iso3166-1 alpha-numeric country code.
+func isIso3166AlphaNumeric(fl FieldLevel) bool {
+	var code int
+	field := fl.Field()
+	switch field.Kind() {
+	case reflect.String:
+		i, err := strconv.Atoi(field.String())
+		if err != nil {
+			return false
+		}
+
+		code = i % 1000
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		code = int(field.Int() % 1000)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		code = int(field.Uint() % 1000)
+	default:
+		panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+	}
+
+	_, ok := iso3166_1_alpha_numeric[code]
+	return ok
+}
+
+// isIso3166AlphaNumericEU is the validation function for validating if the
+// current field's value is a valid iso3166-1 alpha-numeric European Union country code.
+func isIso3166AlphaNumericEU(fl FieldLevel) bool {
+	var code int
+	field := fl.Field()
+	switch field.Kind() {
+	case reflect.String:
+		i, err := strconv.Atoi(field.String())
+		if err != nil {
+			return false
+		}
+
+		code = i % 1000
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		code = int(field.Int() % 1000)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		code = int(field.Uint() % 1000)
+	default:
+		panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+	}
+
+	_, ok := iso3166_1_alpha_numeric_eu[code]
+	return ok
+}
+
+// isIso31662 is the validation function for validating if the
+// current field's value is a valid iso3166-2 code.
+func isIso31662(fl FieldLevel) bool {
+	_, ok := iso3166_2[fl.Field().String()]
+	return ok
+}
+
+// isIso4217 is the validation function for validating if the
+// current field's value is a valid iso4217 currency code.
+func isIso4217(fl FieldLevel) bool {
+	_, ok := iso4217[fl.Field().String()]
+	return ok
+}
+
+// isIso4217Numeric is the validation function for validating if the
+// current field's value is a valid iso4217 numeric currency code.
+func isIso4217Numeric(fl FieldLevel) bool {
+	var code int
+	field := fl.Field()
+	switch field.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		code = int(field.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		code = int(field.Uint())
+	default:
+		panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+	}
+
+	_, ok := iso4217_numeric[code]
+	return ok
+}
+
+// isIsoBicFormat is the validation function for validating if the
+// current field's value is a valid Business Identifier Code (SWIFT code),
+// defined in ISO 9362.
+func isIsoBicFormat(fl FieldLevel) bool {
+	bicString := fl.Field().String()
+	return bicRegex().MatchString(bicString)
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
