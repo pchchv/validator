@@ -1648,6 +1648,30 @@ func isAlphaUnicode(fl FieldLevel) bool {
 	return alphaUnicodeRegex().MatchString(fl.Field().String())
 }
 
+// isHexadecimal is the validation function for validating if the
+// current field's value is a valid hexadecimal.
+func isHexadecimal(fl FieldLevel) bool {
+	return hexadecimalRegex().MatchString(fl.Field().String())
+}
+
+// isDefault is the opposite of required aka hasValue.
+func isDefault(fl FieldLevel) bool {
+	return !hasValue(fl)
+}
+
+// isBoolean is the validation function for validating if the
+// current field's value is a valid boolean value or can be
+// safely converted to a boolean value.
+func isBoolean(fl FieldLevel) bool {
+	switch fl.Field().Kind() {
+	case reflect.Bool:
+		return true
+	default:
+		_, err := strconv.ParseBool(fl.Field().String())
+		return err == nil
+	}
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
