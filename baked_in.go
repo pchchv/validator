@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net"
+	"net/mail"
 	"net/url"
 	"os"
 	"reflect"
@@ -17,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gabriel-vasile/mimetype"
 	urn "github.com/leodido/go-urn"
 	"golang.org/x/crypto/sha3"
 )
@@ -1493,6 +1495,81 @@ func isFilePath(fl FieldLevel) bool {
 	}
 
 	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+// isImage is the validation function for validating if the
+// current field's value contains the path to a valid image file
+func isImage(fl FieldLevel) bool {
+	field := fl.Field()
+	mimetypes := map[string]bool{
+		"image/bmp":                true,
+		"image/cis-cod":            true,
+		"image/gif":                true,
+		"image/ief":                true,
+		"image/jpeg":               true,
+		"image/jp2":                true,
+		"image/jpx":                true,
+		"image/jpm":                true,
+		"image/pipeg":              true,
+		"image/png":                true,
+		"image/svg+xml":            true,
+		"image/tiff":               true,
+		"image/webp":               true,
+		"image/x-cmu-raster":       true,
+		"image/x-cmx":              true,
+		"image/x-icon":             true,
+		"image/x-portable-anymap":  true,
+		"image/x-portable-bitmap":  true,
+		"image/x-portable-graymap": true,
+		"image/x-portable-pixmap":  true,
+		"image/x-rgb":              true,
+		"image/x-xbitmap":          true,
+		"image/x-xpixmap":          true,
+		"image/x-xwindowdump":      true,
+	}
+	switch field.Kind() {
+	case reflect.String:
+		filePath := field.String()
+		fileInfo, err := os.Stat(filePath)
+		if err != nil || fileInfo.IsDir() {
+			return false
+		}
+
+		file, err := os.Open(filePath)
+		if err != nil {
+			return false
+		}
+		defer func() {
+			_ = file.Close()
+		}()
+
+		mime, err := mimetype.DetectReader(file)
+		if err != nil {
+			return false
+		}
+
+		if _, ok := mimetypes[mime.String()]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+// isE164 is the validation function for validating if the
+// current field's value is a valid e.164 formatted phone number.
+func isE164(fl FieldLevel) bool {
+	return e164Regex().MatchString(fl.Field().String())
+}
+
+// isEmail is the validation function for validating if the
+// current field's value is a valid email address.
+func isEmail(fl FieldLevel) bool {
+	_, err := mail.ParseAddress(fl.Field().String())
+	if err != nil {
+		return false
+	}
+
+	return emailRegex().MatchString(fl.Field().String())
 }
 
 // hasValue is the validation function for validating if the current field's value is not the default static value.
