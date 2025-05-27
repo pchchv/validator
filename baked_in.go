@@ -17,6 +17,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gabriel-vasile/mimetype"
 	urn "github.com/leodido/go-urn"
@@ -1670,6 +1671,144 @@ func isBoolean(fl FieldLevel) bool {
 		_, err := strconv.ParseBool(fl.Field().String())
 		return err == nil
 	}
+}
+
+// isGt is the validation function for validating if the
+// current field's value is greater than the param's value.
+func isGt(fl FieldLevel) bool {
+	field := fl.Field()
+	param := fl.Param()
+	switch field.Kind() {
+	case reflect.String:
+		p := asInt(param)
+		return int64(utf8.RuneCountInString(field.String())) > p
+	case reflect.Slice, reflect.Map, reflect.Array:
+		p := asInt(param)
+		return int64(field.Len()) > p
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		p := asIntFromType(field.Type(), param)
+		return field.Int() > p
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		p := asUint(param)
+		return field.Uint() > p
+	case reflect.Float32:
+		p := asFloat32(param)
+		return field.Float() > p
+	case reflect.Float64:
+		p := asFloat64(param)
+		return field.Float() > p
+	case reflect.Struct:
+		if field.Type().ConvertibleTo(timeType) {
+			return field.Convert(timeType).Interface().(time.Time).After(time.Now().UTC())
+		}
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+// isGtField is the validation function for validating if the
+// current field's value is greater than the field specified by the param's value.
+func isGtField(fl FieldLevel) bool {
+	field := fl.Field()
+	kind := field.Kind()
+	currentField, currentKind, _, ok := fl.GetStructFieldOK()
+	if !ok || currentKind != kind {
+		return false
+	}
+
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return field.Int() > currentField.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return field.Uint() > currentField.Uint()
+	case reflect.Float32, reflect.Float64:
+		return field.Float() > currentField.Float()
+	case reflect.Struct:
+		fieldType := field.Type()
+		if fieldType.ConvertibleTo(timeType) && currentField.Type().ConvertibleTo(timeType) {
+			t := currentField.Convert(timeType).Interface().(time.Time)
+			fieldTime := field.Convert(timeType).Interface().(time.Time)
+			return fieldTime.After(t)
+		}
+
+		// not Same underlying type i. e. struct and time
+		if fieldType != currentField.Type() {
+			return false
+		}
+	}
+
+	// default reflect.String
+	return len(field.String()) > len(currentField.String())
+}
+
+// isGte is the validation function for validating if the
+// current field's value is greater than or equal to the param's value.
+func isGte(fl FieldLevel) bool {
+	field := fl.Field()
+	param := fl.Param()
+	switch field.Kind() {
+	case reflect.String:
+		p := asInt(param)
+		return int64(utf8.RuneCountInString(field.String())) >= p
+	case reflect.Slice, reflect.Map, reflect.Array:
+		p := asInt(param)
+		return int64(field.Len()) >= p
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		p := asIntFromType(field.Type(), param)
+		return field.Int() >= p
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		p := asUint(param)
+		return field.Uint() >= p
+	case reflect.Float32:
+		p := asFloat32(param)
+		return field.Float() >= p
+	case reflect.Float64:
+		p := asFloat64(param)
+		return field.Float() >= p
+	case reflect.Struct:
+		if field.Type().ConvertibleTo(timeType) {
+			now := time.Now().UTC()
+			t := field.Convert(timeType).Interface().(time.Time)
+			return t.After(now) || t.Equal(now)
+		}
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+// isGteField is the validation function for validating if the
+// current field's value is greater than or equal to the field specified by the param's value.
+func isGteField(fl FieldLevel) bool {
+	field := fl.Field()
+	kind := field.Kind()
+	currentField, currentKind, _, ok := fl.GetStructFieldOK()
+	if !ok || currentKind != kind {
+		return false
+	}
+
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return field.Int() >= currentField.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return field.Uint() >= currentField.Uint()
+	case reflect.Float32, reflect.Float64:
+		return field.Float() >= currentField.Float()
+	case reflect.Struct:
+		fieldType := field.Type()
+		if fieldType.ConvertibleTo(timeType) && currentField.Type().ConvertibleTo(timeType) {
+			t := currentField.Convert(timeType).Interface().(time.Time)
+			fieldTime := field.Convert(timeType).Interface().(time.Time)
+			return fieldTime.After(t) || fieldTime.Equal(t)
+		}
+
+		// not Same underlying type i. e. struct and time
+		if fieldType != currentField.Type() {
+			return false
+		}
+	}
+
+	// default reflect.String
+	return len(field.String()) >= len(currentField.String())
 }
 
 // hasValue is the validation function for validating if the current field's value is not the default static value.
