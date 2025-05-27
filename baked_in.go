@@ -1828,6 +1828,24 @@ func isValidateFn(fl FieldLevel) bool {
 	return ok
 }
 
+// isCron is the validation function for validating if the
+// current field's value is a valid cron expression.
+func isCron(fl FieldLevel) bool {
+	cronString := fl.Field().String()
+	return cronRegex().MatchString(cronString)
+}
+
+// isEIN is the validation function for validating if the
+// current field's value is a valid U.S. Employer Identification Number (EIN).
+func isEIN(fl FieldLevel) bool {
+	field := fl.Field()
+	if field.Len() != 10 {
+		return false
+	}
+
+	return einRegex().MatchString(field.String())
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
