@@ -2,9 +2,11 @@ package validator
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/fs"
 	"net"
@@ -25,9 +27,12 @@ import (
 )
 
 var (
-	oneofValsCache       = map[string][]string{}
-	oneofValsCacheRWLock = sync.RWMutex{}
-	restrictedTags       = map[string]struct{}{
+	errMethodNotFound          = errors.New(`method not found`)
+	errMethodReturnNoValues    = errors.New(`method return o values (void)`)
+	errMethodReturnInvalidType = errors.New(`method should return invalid type`)
+	oneofValsCache             = map[string][]string{}
+	oneofValsCacheRWLock       = sync.RWMutex{}
+	restrictedTags             = map[string]struct{}{
 		diveTag:           {},
 		keysTag:           {},
 		endKeysTag:        {},
@@ -1811,6 +1816,18 @@ func isGteField(fl FieldLevel) bool {
 	return len(field.String()) >= len(currentField.String())
 }
 
+func isValidateFn(fl FieldLevel) bool {
+	const defaultParam = `Validate`
+	field := fl.Field()
+	validateFn := cmp.Or(fl.Param(), defaultParam)
+	ok, err := tryCallValidateFn(field, validateFn)
+	if err != nil {
+		return false
+	}
+
+	return ok
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
@@ -1836,5 +1853,38 @@ func hasNotZeroValue(fl FieldLevel) bool {
 			return !field.IsZero()
 		}
 		return field.IsValid() && !field.IsZero()
+	}
+}
+
+func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
+	method := field.MethodByName(validateFn)
+	if field.CanAddr() && !method.IsValid() {
+		method = field.Addr().MethodByName(validateFn)
+	}
+
+	if !method.IsValid() {
+		return false, fmt.Errorf("unable to call %q on type %q: %w",
+			validateFn, field.Type().String(), errMethodNotFound)
+	}
+
+	returnValues := method.Call([]reflect.Value{})
+	if len(returnValues) == 0 {
+		return false, fmt.Errorf("unable to use result of method %q on type %q: %w",
+			validateFn, field.Type().String(), errMethodReturnNoValues)
+	}
+
+	firstReturnValue := returnValues[0]
+	switch firstReturnValue.Kind() {
+	case reflect.Bool:
+		return firstReturnValue.Bool(), nil
+	case reflect.Interface:
+		errorType := reflect.TypeOf((*error)(nil)).Elem()
+		if firstReturnValue.Type().Implements(errorType) {
+			return firstReturnValue.IsNil(), nil
+		}
+
+		return false, fmt.Errorf("unable to use result of method %q on type %q: %w (got interface %v expect error)", validateFn, field.Type().String(), errMethodReturnInvalidType, firstReturnValue.Type().String())
+	default:
+		return false, fmt.Errorf("unable to use result of method %q on type %q: %w (got %v expect error or bool)", validateFn, field.Type().String(), errMethodReturnInvalidType, firstReturnValue.Type().String())
 	}
 }
