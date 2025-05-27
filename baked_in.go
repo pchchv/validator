@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
+
+	"golang.org/x/crypto/sha3"
 )
 
 var (
@@ -824,6 +827,40 @@ func isBitcoinBech32Address(fl FieldLevel) bool {
 
 	if len(sw) < 2 || len(sw) > 40 {
 		return false
+	}
+
+	return true
+}
+
+// isEthereumAddress is the validation function for validating if the
+// field's value is a valid Ethereum address.
+func isEthereumAddress(fl FieldLevel) bool {
+	address := fl.Field().String()
+	return ethAddressRegex().MatchString(address)
+}
+
+// isEthereumAddressChecksum is the validation function for validating if the
+// field's value is a valid checksummed Ethereum address.
+func isEthereumAddressChecksum(fl FieldLevel) bool {
+	address := fl.Field().String()
+	if !ethAddressRegex().MatchString(address) {
+		return false
+	}
+
+	// checksum validation
+	address = address[2:] // skip "0x" prefix
+	h := sha3.NewLegacyKeccak256()
+	// hash.Hash's io.Writer implementation says it never returns an error
+	_, _ = h.Write([]byte(strings.ToLower(address)))
+	hash := hex.EncodeToString(h.Sum(nil))
+	for i := 0; i < len(address); i++ {
+		if address[i] <= '9' { // skip 0-9 digits: they don't have upper/lower-case
+			continue
+		}
+
+		if hash[i] > '7' && address[i] >= 'a' || hash[i] <= '7' && address[i] <= 'F' {
+			return false
+		}
 	}
 
 	return true
