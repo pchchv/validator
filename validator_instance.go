@@ -10,6 +10,7 @@ import (
 )
 
 const (
+	defaultTagName     = "validate"
 	utf8HexComma       = "0x2C"
 	utf8Pipe           = "0x7C"
 	tagSeparator       = ","
@@ -37,6 +38,8 @@ const (
 var (
 	timeDurationType = reflect.TypeOf(time.Duration(0))
 	timeType         = reflect.TypeOf(time.Time{})
+	byteSliceType    = reflect.TypeOf([]byte{})
+	defaultCField    = &cField{namesEqual: true}
 )
 
 // TagNameFunc allows for adding of a custom tag name parser.

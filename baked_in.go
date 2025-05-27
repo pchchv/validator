@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -1844,6 +1845,31 @@ func isEIN(fl FieldLevel) bool {
 	}
 
 	return einRegex().MatchString(field.String())
+}
+
+// isJWT is the validation function for validating if the
+// current field's value is a valid JWT string.
+func isJWT(fl FieldLevel) bool {
+	return jWTRegex().MatchString(fl.Field().String())
+}
+
+// isJSON is the validation function for validating if the
+// current field's value is a valid json string.
+func isJSON(fl FieldLevel) bool {
+	field := fl.Field()
+	switch field.Kind() {
+	case reflect.String:
+		val := field.String()
+		return json.Valid([]byte(val))
+	case reflect.Slice:
+		fieldType := field.Type()
+		if fieldType.ConvertibleTo(byteSliceType) {
+			b := field.Convert(byteSliceType).Interface().([]byte)
+			return json.Valid(b)
+		}
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
 }
 
 // hasValue is the validation function for validating if the current field's value is not the default static value.
