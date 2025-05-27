@@ -6,14 +6,18 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io/fs"
 	"net"
 	"net/url"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
+	urn "github.com/leodido/go-urn"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -1336,6 +1340,89 @@ func isHttpURL(fl FieldLevel) bool {
 		}
 
 		return url.Scheme == "http" || url.Scheme == "https"
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+// isUrnRFC2141 is the validation function for validating if the
+// current field's value is a valid URN as per RFC 2141.
+func isUrnRFC2141(fl FieldLevel) bool {
+	field := fl.Field()
+	switch field.Kind() {
+	case reflect.String:
+		str := field.String()
+		_, match := urn.Parse([]byte(str))
+		return match
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+// isDir is the validation function for validating if the
+// current field's value is a valid existing directory.
+func isDir(fl FieldLevel) bool {
+	field := fl.Field()
+	if field.Kind() == reflect.String {
+		fileInfo, err := os.Stat(field.String())
+		if err != nil {
+			return false
+		}
+
+		return fileInfo.IsDir()
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+// isDirPath is the validation function for validating if the
+// current field's value is a valid directory.
+func isDirPath(fl FieldLevel) bool {
+	var exists bool
+	var err error
+	field := fl.Field()
+	// if it exists, it obviously is valid
+	// this is done first to avoid code duplication and unnecessary additional logic
+	if exists = isDir(fl); exists {
+		return true
+	}
+
+	// it does not exist but may still be a valid path
+	switch field.Kind() {
+	case reflect.String:
+		// every OS allows for whitespace,
+		// but none let you use a dir with no name (to my knowledge)
+		// unless you're dealing with raw inodes, but I digress
+		if strings.TrimSpace(field.String()) == "" {
+			return false
+		}
+
+		if _, err = os.Stat(field.String()); err != nil {
+			switch t := err.(type) {
+			case *fs.PathError:
+				if t.Err == syscall.EINVAL {
+					// it's definitely an invalid character in the path
+					return false
+				}
+				// it could be a permission error, a does-not-exist error, etc.
+				// out-of-scope for this validation, though
+				// lastly, we make sure it is a directory
+				if strings.HasSuffix(field.String(), string(os.PathSeparator)) {
+					return true
+				} else {
+					return false
+				}
+			default:
+				panic(err)
+			}
+		}
+
+		// repeat the check here to make sure it is an explicit directory in case the above os.Stat didn't trigger an error
+		if strings.HasSuffix(field.String(), string(os.PathSeparator)) {
+			return true
+		} else {
+			return false
+		}
 	}
 
 	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
