@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
+	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -1257,6 +1258,87 @@ func isBase64URL(fl FieldLevel) bool {
 // isBase64RawURL is the validation function for validating if the current field's value is a valid base64 URL safe string without '=' padding.
 func isBase64RawURL(fl FieldLevel) bool {
 	return base64RawURLRegex().MatchString(fl.Field().String())
+}
+
+// isURI is the validation function for validating if the
+// current field's value is a valid URI.
+func isURI(fl FieldLevel) bool {
+	field := fl.Field()
+	switch field.Kind() {
+	case reflect.String:
+		s := field.String()
+		if i := strings.Index(s, "#"); i > -1 {
+			s = s[:i]
+		}
+
+		if len(s) == 0 {
+			return false
+		}
+
+		_, err := url.ParseRequestURI(s)
+		return err == nil
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+// isFileURL is the helper function for validating if the
+// `path` valid file URL as per RFC8089.
+func isFileURL(path string) bool {
+	if !strings.HasPrefix(path, "file:/") {
+		return false
+	}
+
+	_, err := url.ParseRequestURI(path)
+	return err == nil
+}
+
+// isURL is the validation function for validating if the
+// current field's value is a valid URL.
+func isURL(fl FieldLevel) bool {
+	field := fl.Field()
+	switch field.Kind() {
+	case reflect.String:
+		s := strings.ToLower(field.String())
+		if len(s) == 0 {
+			return false
+		}
+
+		if isFileURL(s) {
+			return true
+		}
+
+		url, err := url.Parse(s)
+		if err != nil || url.Scheme == "" || (url.Host == "" && url.Fragment == "" && url.Opaque == "") {
+			return false
+		}
+
+		return true
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+// isHttpURL is the validation function for validating if the
+// current field's value is a valid HTTP(s) URL.
+func isHttpURL(fl FieldLevel) bool {
+	if !isURL(fl) {
+		return false
+	}
+
+	field := fl.Field()
+	switch field.Kind() {
+	case reflect.String:
+		s := strings.ToLower(field.String())
+		url, err := url.Parse(s)
+		if err != nil || url.Host == "" {
+			return false
+		}
+
+		return url.Scheme == "http" || url.Scheme == "https"
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
 }
 
 // hasValue is the validation function for validating if the current field's value is not the default static value.
