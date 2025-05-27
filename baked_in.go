@@ -866,6 +866,51 @@ func isEthereumAddressChecksum(fl FieldLevel) bool {
 	return true
 }
 
+// isEq is the validation function for validating if the
+// current field's value is equal to the param's value.
+func isEq(fl FieldLevel) bool {
+	field := fl.Field()
+	param := fl.Param()
+	switch field.Kind() {
+	case reflect.String:
+		return field.String() == param
+	case reflect.Slice, reflect.Map, reflect.Array:
+		p := asInt(param)
+		return int64(field.Len()) == p
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		p := asIntFromType(field.Type(), param)
+		return field.Int() == p
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		p := asUint(param)
+		return field.Uint() == p
+	case reflect.Float32:
+		p := asFloat32(param)
+		return field.Float() == p
+	case reflect.Float64:
+		p := asFloat64(param)
+		return field.Float() == p
+	case reflect.Bool:
+		p := asBool(param)
+		return field.Bool() == p
+	default:
+		panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+	}
+}
+
+// isEqIgnoreCase is the validation function for validating if the
+// current field's string value is equal to the param's value.
+// The comparison is case-insensitive.
+func isEqIgnoreCase(fl FieldLevel) bool {
+	field := fl.Field()
+	param := fl.Param()
+	switch field.Kind() {
+	case reflect.String:
+		return strings.EqualFold(field.String(), param)
+	default:
+		panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+	}
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
