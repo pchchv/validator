@@ -982,7 +982,7 @@ func isEqField(fl FieldLevel) bool {
 			return fieldTime.Equal(t)
 		}
 
-		// not Same underlying type i.e. struct and time
+		// not Same underlying type i. e. struct and time
 		if fieldType != currentField.Type() {
 			return false
 		}
@@ -1028,7 +1028,7 @@ func isNeField(fl FieldLevel) bool {
 			return !fieldTime.Equal(t)
 		}
 
-		// Not Same underlying type i.e. struct and time
+		// not Same underlying type i. e. struct and time
 		if fieldType != currentField.Type() {
 			return true
 		}
@@ -1121,6 +1121,122 @@ func isLtCrossStructField(fl FieldLevel) bool {
 
 	// default reflect.String:
 	return field.String() < topField.String()
+}
+
+// isGteCrossStructField is the validation function for validating if the
+// current field's value is greater than or equal to the field,
+// within a separate struct, specified by the param's value.
+func isGteCrossStructField(fl FieldLevel) bool {
+	field := fl.Field()
+	kind := field.Kind()
+	topField, topKind, _, ok := fl.GetStructFieldOK()
+	if !ok || topKind != kind {
+		return false
+	}
+
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return field.Int() >= topField.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return field.Uint() >= topField.Uint()
+	case reflect.Float32, reflect.Float64:
+		return field.Float() >= topField.Float()
+	case reflect.Slice, reflect.Map, reflect.Array:
+		return int64(field.Len()) >= int64(topField.Len())
+	case reflect.Struct:
+		fieldType := field.Type()
+		if fieldType.ConvertibleTo(timeType) && topField.Type().ConvertibleTo(timeType) {
+			fieldTime := field.Convert(timeType).Interface().(time.Time)
+			topTime := topField.Convert(timeType).Interface().(time.Time)
+			return fieldTime.After(topTime) || fieldTime.Equal(topTime)
+		}
+
+		// not Same underlying type i. e. struct and time
+		if fieldType != topField.Type() {
+			return false
+		}
+	}
+
+	// default reflect.String:
+	return field.String() >= topField.String()
+}
+
+// isGtCrossStructField is the validation function for validating if the
+// current field's value is greater than the field,
+// within a separate struct, specified by the param's value.
+func isGtCrossStructField(fl FieldLevel) bool {
+	field := fl.Field()
+	kind := field.Kind()
+	topField, topKind, _, ok := fl.GetStructFieldOK()
+	if !ok || topKind != kind {
+		return false
+	}
+
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return field.Int() > topField.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return field.Uint() > topField.Uint()
+	case reflect.Float32, reflect.Float64:
+		return field.Float() > topField.Float()
+	case reflect.Slice, reflect.Map, reflect.Array:
+		return int64(field.Len()) > int64(topField.Len())
+	case reflect.Struct:
+		fieldType := field.Type()
+		if fieldType.ConvertibleTo(timeType) && topField.Type().ConvertibleTo(timeType) {
+			fieldTime := field.Convert(timeType).Interface().(time.Time)
+			topTime := topField.Convert(timeType).Interface().(time.Time)
+			return fieldTime.After(topTime)
+		}
+
+		// not Same underlying type i. e. struct and time
+		if fieldType != topField.Type() {
+			return false
+		}
+	}
+
+	// default reflect.String:
+	return field.String() > topField.String()
+}
+
+// isNeCrossStructField is the validation function for validating that the
+// current field's value is not equal to the field,
+// within a separate struct, specified by the param's value.
+func isNeCrossStructField(fl FieldLevel) bool {
+	field := fl.Field()
+	kind := field.Kind()
+	topField, currentKind, _, ok := fl.GetStructFieldOK()
+	if !ok || currentKind != kind {
+		return true
+	}
+
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return topField.Int() != field.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return topField.Uint() != field.Uint()
+	case reflect.Float32, reflect.Float64:
+		return topField.Float() != field.Float()
+	case reflect.Slice, reflect.Map, reflect.Array:
+		return int64(topField.Len()) != int64(field.Len())
+	case reflect.Bool:
+		return topField.Bool() != field.Bool()
+	case reflect.Struct:
+		fieldType := field.Type()
+		if fieldType.ConvertibleTo(timeType) && topField.Type().ConvertibleTo(timeType) {
+			t := field.Convert(timeType).Interface().(time.Time)
+			fieldTime := topField.Convert(timeType).Interface().(time.Time)
+			return !fieldTime.Equal(t)
+		}
+
+		// not Same underlying type i. e. struct and time
+		if fieldType != topField.Type() {
+			return true
+		}
+	}
+
+	// default reflect.String:
+	return topField.String() != field.String()
 }
 
 // hasValue is the validation function for validating if the current field's value is not the default static value.
