@@ -1606,6 +1606,24 @@ func isHSLA(fl FieldLevel) bool {
 	return hslaRegex().MatchString(fl.Field().String())
 }
 
+// isRGB is the validation function for validating if the
+// current field's value is a valid RGB color.
+func isRGB(fl FieldLevel) bool {
+	return rgbRegex().MatchString(fl.Field().String())
+}
+
+// isRGBA is the validation function for validating if the
+// current field's value is a valid RGBA color.
+func isRGBA(fl FieldLevel) bool {
+	return rgbaRegex().MatchString(fl.Field().String())
+}
+
+// isHEXColor is the validation function for validating if the
+// current field's value is a valid HEX color.
+func isHEXColor(fl FieldLevel) bool {
+	return hexColorRegex().MatchString(fl.Field().String())
+}
+
 // hasValue is the validation function for validating if the current field's value is not the default static value.
 func hasValue(fl FieldLevel) bool {
 	field := fl.Field()
