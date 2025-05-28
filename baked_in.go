@@ -2738,6 +2738,24 @@ func containsAny(fl FieldLevel) bool {
 	return strings.ContainsAny(fl.Field().String(), fl.Param())
 }
 
+// excludes is the validation function for validating that the
+// field's value does not contain the text specified within the param.
+func excludes(fl FieldLevel) bool {
+	return !contains(fl)
+}
+
+// excludesRune is the validation function for validating that the
+// field's value does not contain the rune specified within the param.
+func excludesRune(fl FieldLevel) bool {
+	return !containsRune(fl)
+}
+
+// excludesAll is the validation function for validating that the
+// field's value does not contain any of the characters specified within the param.
+func excludesAll(fl FieldLevel) bool {
+	return !containsAny(fl)
+}
+
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
 	method := field.MethodByName(validateFn)
 	if field.CanAddr() && !method.IsValid() {
