@@ -2259,6 +2259,39 @@ func isIP6Addr(fl FieldLevel) bool {
 	return ip != nil && ip.To4() == nil
 }
 
+// isTCP4AddrResolvable is the validation function for validating if the
+// field's value is a resolvable tcp4 address.
+func isTCP4AddrResolvable(fl FieldLevel) bool {
+	if !isIP4Addr(fl) {
+		return false
+	}
+
+	_, err := net.ResolveTCPAddr("tcp4", fl.Field().String())
+	return err == nil
+}
+
+// isTCP6AddrResolvable is the validation function for validating if the
+// field's value is a resolvable tcp6 address.
+func isTCP6AddrResolvable(fl FieldLevel) bool {
+	if !isIP6Addr(fl) {
+		return false
+	}
+
+	_, err := net.ResolveTCPAddr("tcp6", fl.Field().String())
+	return err == nil
+}
+
+// isTCPAddrResolvable is the validation function for validating if the
+// field's value is a resolvable tcp address.
+func isTCPAddrResolvable(fl FieldLevel) bool {
+	if !isIP4Addr(fl) && !isIP6Addr(fl) {
+		return false
+	}
+
+	_, err := net.ResolveTCPAddr("tcp", fl.Field().String())
+	return err == nil
+}
+
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
 	method := field.MethodByName(validateFn)
 	if field.CanAddr() && !method.IsValid() {
