@@ -2510,6 +2510,70 @@ func isMongoDBConnectionString(fl FieldLevel) bool {
 	return mongodbConnectionRegex().MatchString(val)
 }
 
+// isCreditCard is the validation function for validating if the
+// current field's value is a valid credit card number.
+func isCreditCard(fl FieldLevel) bool {
+	var creditCard bytes.Buffer
+	val := fl.Field().String()
+	segments := strings.Split(val, " ")
+	for _, segment := range segments {
+		if len(segment) < 3 {
+			return false
+		}
+
+		creditCard.WriteString(segment)
+	}
+
+	ccDigits := strings.Split(creditCard.String(), "")
+	if size := len(ccDigits); size < 12 || size > 19 {
+		return false
+	}
+
+	return digitsHaveLuhnChecksum(ccDigits)
+}
+
+// isPostcodeByIso3166Alpha2 validates by value which is country code in iso 3166 alpha 2
+// example: `postcode_iso3166_alpha2=US`
+func isPostcodeByIso3166Alpha2(fl FieldLevel) bool {
+	field := fl.Field()
+	param := fl.Param()
+	postcodeRegexInit.Do(initPostcodes)
+	reg, found := postCodeRegexDict[param]
+	if !found {
+		return false
+	}
+
+	return reg.MatchString(field.String())
+}
+
+// isPostcodeByIso3166Alpha2Field validates by field which represents for
+// a value of country code in iso 3166 alpha 2
+// example: `postcode_iso3166_alpha2_field=CountryCode`
+func isPostcodeByIso3166Alpha2Field(fl FieldLevel) bool {
+	field := fl.Field()
+	params := parseOneOfParam(fl.Param())
+	if len(params) != 1 {
+		return false
+	}
+
+	currentField, kind, _, found := fl.GetStructFieldOKAdvanced(fl.Parent(), params[0])
+	if !found {
+		return false
+	}
+
+	if kind != reflect.String {
+		panic(fmt.Sprintf("Bad field type %T", currentField.Interface()))
+	}
+
+	postcodeRegexInit.Do(initPostcodes)
+	reg, found := postCodeRegexDict[currentField.String()]
+	if !found {
+		return false
+	}
+
+	return reg.MatchString(field.String())
+}
+
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
 	method := field.MethodByName(validateFn)
 	if field.CanAddr() && !method.IsValid() {
