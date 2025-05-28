@@ -170,3 +170,9 @@ var (
 		"YT": `^976\d{2}$`,
 	}
 )
+
+func initPostcodes() {
+	for countryCode, pattern := range postCodePatternDict {
+		postCodeRegexDict[countryCode] = regexp.MustCompile(pattern)
+	}
+}
