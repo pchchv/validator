@@ -2386,6 +2386,30 @@ func isHostnamePort(fl FieldLevel) bool {
 	return true
 }
 
+// isUnixAddrResolvable is the validation function for validating if the
+// field's value is a resolvable unix address.
+func isUnixAddrResolvable(fl FieldLevel) bool {
+	_, err := net.ResolveUnixAddr("unix", fl.Field().String())
+	return err == nil
+}
+
+func isHostnameRFC952(fl FieldLevel) bool {
+	return hostnameRegexRFC952().MatchString(fl.Field().String())
+}
+
+func isHostnameRFC1123(fl FieldLevel) bool {
+	return hostnameRegexRFC1123().MatchString(fl.Field().String())
+}
+
+func isFQDN(fl FieldLevel) bool {
+	val := fl.Field().String()
+	if val == "" {
+		return false
+	}
+
+	return fqdnRegexRFC1123().MatchString(val)
+}
+
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
 	method := field.MethodByName(validateFn)
 	if field.CanAddr() && !method.IsValid() {
