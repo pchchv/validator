@@ -2237,6 +2237,28 @@ func isLteField(fl FieldLevel) bool {
 	return len(field.String()) <= len(currentField.String())
 }
 
+func isIP4Addr(fl FieldLevel) bool {
+	val := fl.Field().String()
+	if idx := strings.LastIndex(val, ":"); idx != -1 {
+		val = val[0:idx]
+	}
+
+	ip := net.ParseIP(val)
+	return ip != nil && ip.To4() != nil
+}
+
+func isIP6Addr(fl FieldLevel) bool {
+	val := fl.Field().String()
+	if idx := strings.LastIndex(val, ":"); idx != -1 {
+		if idx != 0 && val[idx-1:idx] == "]" {
+			val = val[1 : idx-1]
+		}
+	}
+
+	ip := net.ParseIP(val)
+	return ip != nil && ip.To4() == nil
+}
+
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
 	method := field.MethodByName(validateFn)
 	if field.CanAddr() && !method.IsValid() {
