@@ -77,17 +77,6 @@ func wrapFunc(fn Func) FuncCtx {
 	}
 }
 
-// hasMultiByteCharacter is the validation function for validating if the
-// field's value has a multi byte character.
-func hasMultiByteCharacter(fl FieldLevel) bool {
-	field := fl.Field()
-	if field.Len() == 0 {
-		return true
-	}
-
-	return multibyteRegex().MatchString(field.String())
-}
-
 func parseOneOfParam(s string) []string {
 	oneofValsCacheRWLock.RLock()
 	vals, ok := oneofValsCache[s]
@@ -296,6 +285,17 @@ func skipUnless(fl FieldLevel) bool {
 	return hasValue(fl)
 }
 
+// hasMultiByteCharacter is the validation function for validating if the
+// field's value has a multi byte character.
+func hasMultiByteCharacter(fl FieldLevel) bool {
+	field := fl.Field()
+	if field.Len() == 0 {
+		return true
+	}
+
+	return multibyteRegex().MatchString(field.String())
+}
+
 // hasLuhnChecksum is the validation for validating if the current field's value has a valid Luhn checksum.
 func hasLuhnChecksum(fl FieldLevel) bool {
 	field := fl.Field()
@@ -318,6 +318,34 @@ func hasLuhnChecksum(fl FieldLevel) bool {
 
 	digits := strings.Split(str, "")
 	return digitsHaveLuhnChecksum(digits)
+}
+
+// hasValue is the validation function for validating if the current field's value is not the default static value.
+func hasValue(fl FieldLevel) bool {
+	field := fl.Field()
+	switch field.Kind() {
+	case reflect.Slice, reflect.Map, reflect.Ptr, reflect.Interface, reflect.Chan, reflect.Func:
+		return !field.IsNil()
+	default:
+		if fl.(*validate).fldIsPointer && field.Interface() != nil {
+			return true
+		}
+		return field.IsValid() && !field.IsZero()
+	}
+}
+
+// hasNotZeroValue is the validation function for validating if the current field's value is not the zero value for its type.
+func hasNotZeroValue(fl FieldLevel) bool {
+	field := fl.Field()
+	switch field.Kind() {
+	case reflect.Slice, reflect.Map, reflect.Ptr, reflect.Interface, reflect.Chan, reflect.Func:
+		return !field.IsNil()
+	default:
+		if fl.(*validate).fldIsPointer && field.Interface() != nil {
+			return !field.IsZero()
+		}
+		return field.IsValid() && !field.IsZero()
+	}
 }
 
 func isOneOf(fl FieldLevel) bool {
@@ -2166,34 +2194,6 @@ func isLteField(fl FieldLevel) bool {
 
 	// default reflect.String
 	return len(field.String()) <= len(currentField.String())
-}
-
-// hasValue is the validation function for validating if the current field's value is not the default static value.
-func hasValue(fl FieldLevel) bool {
-	field := fl.Field()
-	switch field.Kind() {
-	case reflect.Slice, reflect.Map, reflect.Ptr, reflect.Interface, reflect.Chan, reflect.Func:
-		return !field.IsNil()
-	default:
-		if fl.(*validate).fldIsPointer && field.Interface() != nil {
-			return true
-		}
-		return field.IsValid() && !field.IsZero()
-	}
-}
-
-// hasNotZeroValue is the validation function for validating if the current field's value is not the zero value for its type.
-func hasNotZeroValue(fl FieldLevel) bool {
-	field := fl.Field()
-	switch field.Kind() {
-	case reflect.Slice, reflect.Map, reflect.Ptr, reflect.Interface, reflect.Chan, reflect.Func:
-		return !field.IsNil()
-	default:
-		if fl.(*validate).fldIsPointer && field.Interface() != nil {
-			return !field.IsZero()
-		}
-		return field.IsValid() && !field.IsZero()
-	}
 }
 
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
