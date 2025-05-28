@@ -2325,6 +2325,39 @@ func isUDPAddrResolvable(fl FieldLevel) bool {
 	return err == nil
 }
 
+// isIPAddrResolvable is the validation function for validating if the
+// field's value is a resolvable ip address.
+func isIPAddrResolvable(fl FieldLevel) bool {
+	if !isIP(fl) {
+		return false
+	}
+
+	_, err := net.ResolveIPAddr("ip", fl.Field().String())
+	return err == nil
+}
+
+// isIP4AddrResolvable is the validation function for validating if the
+// field's value is a resolvable ip4 address.
+func isIP4AddrResolvable(fl FieldLevel) bool {
+	if !isIPv4(fl) {
+		return false
+	}
+
+	_, err := net.ResolveIPAddr("ip4", fl.Field().String())
+	return err == nil
+}
+
+// isIP6AddrResolvable is the validation function for validating if the
+// field's value is a resolvable ip6 address.
+func isIP6AddrResolvable(fl FieldLevel) bool {
+	if !isIPv6(fl) {
+		return false
+	}
+
+	_, err := net.ResolveIPAddr("ip6", fl.Field().String())
+	return err == nil
+}
+
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
 	method := field.MethodByName(validateFn)
 	if field.CanAddr() && !method.IsValid() {
