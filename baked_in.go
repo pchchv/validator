@@ -2574,6 +2574,30 @@ func isPostcodeByIso3166Alpha2Field(fl FieldLevel) bool {
 	return reg.MatchString(field.String())
 }
 
+// fieldContains is the validation function for validating if the
+// current field's value contains the field specified by the param's value.
+func fieldContains(fl FieldLevel) bool {
+	field := fl.Field()
+	currentField, _, _, ok := fl.GetStructFieldOK()
+	if !ok {
+		return false
+	}
+
+	return strings.Contains(field.String(), currentField.String())
+}
+
+// fieldExcludes is the validation function for validating if the
+// current field's value excludes the field specified by the param's value.
+func fieldExcludes(fl FieldLevel) bool {
+	field := fl.Field()
+	currentField, _, _, ok := fl.GetStructFieldOK()
+	if !ok {
+		return true
+	}
+
+	return !strings.Contains(field.String(), currentField.String())
+}
+
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
 	method := field.MethodByName(validateFn)
 	if field.CanAddr() && !method.IsValid() {
