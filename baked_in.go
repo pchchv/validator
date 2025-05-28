@@ -360,6 +360,35 @@ func hasMaxOf(fl FieldLevel) bool {
 	return isLte(fl)
 }
 
+// hasLengthOf is the validation function for validating if the
+// current field's value is equal to the param's value.
+func hasLengthOf(fl FieldLevel) bool {
+	field := fl.Field()
+	param := fl.Param()
+	switch field.Kind() {
+	case reflect.String:
+		p := asInt(param)
+		return int64(utf8.RuneCountInString(field.String())) == p
+	case reflect.Slice, reflect.Map, reflect.Array:
+		p := asInt(param)
+		return int64(field.Len()) == p
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		p := asIntFromType(field.Type(), param)
+		return field.Int() == p
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		p := asUint(param)
+		return field.Uint() == p
+	case reflect.Float32:
+		p := asFloat32(param)
+		return field.Float() == p
+	case reflect.Float64:
+		p := asFloat64(param)
+		return field.Float() == p
+	default:
+		panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+	}
+}
+
 func isOneOf(fl FieldLevel) bool {
 	var v string
 	vals := parseOneOfParam(fl.Param())
