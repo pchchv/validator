@@ -2440,6 +2440,46 @@ func isUppercase(fl FieldLevel) bool {
 	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
 }
 
+// isDatetime is the validation function for validating if the
+// current field's value is a valid datetime string.
+func isDatetime(fl FieldLevel) bool {
+	field := fl.Field()
+	param := fl.Param()
+	if field.Kind() == reflect.String {
+		_, err := time.Parse(param, field.String())
+		return err == nil
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+// isTimeZone is the validation function for validating if the
+// current field's value is a valid time zone string.
+func isTimeZone(fl FieldLevel) bool {
+	field := fl.Field()
+	if field.Kind() == reflect.String {
+		// empty value is converted to UTC by
+		// time.LoadLocation but disallow it as
+		// it is not a valid time zone name
+		if field.String() == "" {
+			return false
+		}
+
+		// local value is converted to the
+		// current system time zone by time.LoadLocation but
+		// disallow it as it is not a valid time zone name
+		if strings.ToLower(field.String()) == "local" {
+			return false
+		}
+
+		_, err := time.LoadLocation(field.String())
+		return err == nil
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
 	method := field.MethodByName(validateFn)
 	if field.CanAddr() && !method.IsValid() {
