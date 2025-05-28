@@ -2479,6 +2479,36 @@ func isTimeZone(fl FieldLevel) bool {
 	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
 }
 
+// isSpiceDB is the validation function for validating if the
+// current field's value is valid for use with Authzed SpiceDB in the indicated way.
+func isSpiceDB(fl FieldLevel) bool {
+	val := fl.Field().String()
+	param := fl.Param()
+	switch param {
+	case "permission":
+		return spicedbPermissionRegex().MatchString(val)
+	case "type":
+		return spicedbTypeRegex().MatchString(val)
+	case "id", "":
+		return spicedbIDRegex().MatchString(val)
+	default:
+		panic("Unrecognized parameter: " + param)
+	}
+}
+
+// isMongoDBObjectId is the validation function for validating if the
+// current field's value is valid MongoDB ObjectID.
+func isMongoDBObjectId(fl FieldLevel) bool {
+	val := fl.Field().String()
+	return mongodbIdRegex().MatchString(val)
+}
+
+// isMongoDBConnectionString is the validation function for validating if the
+// current field's value is valid MongoDB Connection String.
+func isMongoDBConnectionString(fl FieldLevel) bool {
+	val := fl.Field().String()
+	return mongodbConnectionRegex().MatchString(val)
+}
 
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
 	method := field.MethodByName(validateFn)
