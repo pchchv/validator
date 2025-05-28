@@ -2358,6 +2358,34 @@ func isIP6AddrResolvable(fl FieldLevel) bool {
 	return err == nil
 }
 
+// IsPort validates if the current field's value represents a valid port.
+func isPort(fl FieldLevel) bool {
+	val := fl.Field().Uint()
+	return val >= 1 && val <= 65535
+}
+
+// isHostnamePort validates a <dns>:<port> combination for fields typically used for socket address.
+func isHostnamePort(fl FieldLevel) bool {
+	val := fl.Field().String()
+	host, port, err := net.SplitHostPort(val)
+	if err != nil {
+		return false
+	}
+
+	// port must be a iny <= 65535.
+	portNum, err := strconv.ParseInt(port, 10, 32)
+	if err != nil || portNum > 65535 || portNum < 1 {
+		return false
+	}
+
+	// if host is specified, it should match a DNS name
+	if host != "" {
+		return hostnameRegexRFC1123().MatchString(host)
+	}
+
+	return true
+}
+
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
 	method := field.MethodByName(validateFn)
 	if field.CanAddr() && !method.IsValid() {
