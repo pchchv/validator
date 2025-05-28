@@ -2719,6 +2719,25 @@ func excludedWithoutAll(fl FieldLevel) bool {
 	return !hasValue(fl)
 }
 
+// contains is the validation function for validating that the
+// field's value contains the text specified within the param.
+func contains(fl FieldLevel) bool {
+	return strings.Contains(fl.Field().String(), fl.Param())
+}
+
+// containsRune is the validation function for validating that the
+// field's value contains the rune specified within the param.
+func containsRune(fl FieldLevel) bool {
+	r, _ := utf8.DecodeRuneInString(fl.Param())
+	return strings.ContainsRune(fl.Field().String(), r)
+}
+
+// containsAny is the validation function for validating that the
+// field's value contains any of the characters specified within the param.
+func containsAny(fl FieldLevel) bool {
+	return strings.ContainsAny(fl.Field().String(), fl.Param())
+}
+
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
 	method := field.MethodByName(validateFn)
 	if field.CanAddr() && !method.IsValid() {
