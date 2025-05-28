@@ -348,6 +348,18 @@ func hasNotZeroValue(fl FieldLevel) bool {
 	}
 }
 
+// hasMinOf is the validation function for validating if the
+// current field's value is greater than or equal to the param's value.
+func hasMinOf(fl FieldLevel) bool {
+	return isGte(fl)
+}
+
+// hasMaxOf is the validation function for validating if the
+// current field's value is less than or equal to the param's value.
+func hasMaxOf(fl FieldLevel) bool {
+	return isLte(fl)
+}
+
 func isOneOf(fl FieldLevel) bool {
 	var v string
 	vals := parseOneOfParam(fl.Param())
