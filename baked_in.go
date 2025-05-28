@@ -2598,6 +2598,30 @@ func fieldExcludes(fl FieldLevel) bool {
 	return !strings.Contains(field.String(), currentField.String())
 }
 
+// startsWith is the validation function for validating that the
+// field's value starts with the text specified within the param.
+func startsWith(fl FieldLevel) bool {
+	return strings.HasPrefix(fl.Field().String(), fl.Param())
+}
+
+// endsWith is the validation function for validating that the
+// field's value ends with the text specified within the param.
+func endsWith(fl FieldLevel) bool {
+	return strings.HasSuffix(fl.Field().String(), fl.Param())
+}
+
+// startsNotWith is the validation function for validating that the
+// field's value does not start with the text specified within the param.
+func startsNotWith(fl FieldLevel) bool {
+	return !startsWith(fl)
+}
+
+// endsNotWith is the validation function for validating that the
+// field's value does not end with the text specified within the param.
+func endsNotWith(fl FieldLevel) bool {
+	return !endsWith(fl)
+}
+
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
 	method := field.MethodByName(validateFn)
 	if field.CanAddr() && !method.IsValid() {
