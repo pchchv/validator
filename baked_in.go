@@ -2292,6 +2292,39 @@ func isTCPAddrResolvable(fl FieldLevel) bool {
 	return err == nil
 }
 
+// isUDP4AddrResolvable is the validation function for validating if the
+// field's value is a resolvable udp4 address.
+func isUDP4AddrResolvable(fl FieldLevel) bool {
+	if !isIP4Addr(fl) {
+		return false
+	}
+
+	_, err := net.ResolveUDPAddr("udp4", fl.Field().String())
+	return err == nil
+}
+
+// isUDP6AddrResolvable is the validation function for validating if the
+// field's value is a resolvable udp6 address.
+func isUDP6AddrResolvable(fl FieldLevel) bool {
+	if !isIP6Addr(fl) {
+		return false
+	}
+
+	_, err := net.ResolveUDPAddr("udp6", fl.Field().String())
+	return err == nil
+}
+
+// isUDPAddrResolvable is the validation function for validating if the
+// field's value is a resolvable udp address.
+func isUDPAddrResolvable(fl FieldLevel) bool {
+	if !isIP4Addr(fl) && !isIP6Addr(fl) {
+		return false
+	}
+
+	_, err := net.ResolveUDPAddr("udp", fl.Field().String())
+	return err == nil
+}
+
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
 	method := field.MethodByName(validateFn)
 	if field.CanAddr() && !method.IsValid() {
