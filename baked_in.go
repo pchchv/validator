@@ -2622,6 +2622,61 @@ func endsNotWith(fl FieldLevel) bool {
 	return !endsWith(fl)
 }
 
+// excludedIf is the validation function.
+// The field under validation must
+// not be present or is empty only if all the
+// other specified fields are equal to the
+// value following with the specified field.
+func excludedIf(fl FieldLevel) bool {
+	params := parseOneOfParam(fl.Param())
+	if len(params)%2 != 0 {
+		panic(fmt.Sprintf("Bad param number for excluded_if %s", fl.FieldName()))
+	}
+
+	for i := 0; i < len(params); i += 2 {
+		if !requireCheckFieldValue(fl, params[i], params[i+1], false) {
+			return true
+		}
+	}
+
+	return !hasValue(fl)
+}
+
+// excludedUnless is the validation function.
+// The field under validation must
+// not be present or is empty unless all the
+// other specified fields are equal to the
+// value following with the specified field.
+func excludedUnless(fl FieldLevel) bool {
+	params := parseOneOfParam(fl.Param())
+	if len(params)%2 != 0 {
+		panic(fmt.Sprintf("Bad param number for excluded_unless %s", fl.FieldName()))
+	}
+
+	for i := 0; i < len(params); i += 2 {
+		if !requireCheckFieldValue(fl, params[i], params[i+1], false) {
+			return !hasValue(fl)
+		}
+	}
+
+	return true
+}
+
+// excludedWith is the validation function.
+// The field under validation must
+// not be present or is empty if any of the
+// other specified fields are present.
+func excludedWith(fl FieldLevel) bool {
+	params := parseOneOfParam(fl.Param())
+	for _, param := range params {
+		if !requireCheckFieldKind(fl, param, true) {
+			return !hasValue(fl)
+		}
+	}
+
+	return true
+}
+
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
 	method := field.MethodByName(validateFn)
 	if field.CanAddr() && !method.IsValid() {
