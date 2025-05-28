@@ -2410,6 +2410,36 @@ func isFQDN(fl FieldLevel) bool {
 	return fqdnRegexRFC1123().MatchString(val)
 }
 
+// isLowercase is the validation function for validating if the
+// current field's value is a lowercase string.
+func isLowercase(fl FieldLevel) bool {
+	field := fl.Field()
+	if field.Kind() == reflect.String {
+		if field.String() == "" {
+			return false
+		} else {
+			return field.String() == strings.ToLower(field.String())
+		}
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+// isUppercase is the validation function for validating if the
+// current field's value is an uppercase string.
+func isUppercase(fl FieldLevel) bool {
+	field := fl.Field()
+	if field.Kind() == reflect.String {
+		if field.String() == "" {
+			return false
+		} else {
+			return field.String() == strings.ToUpper(field.String())
+		}
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
 	method := field.MethodByName(validateFn)
 	if field.CanAddr() && !method.IsValid() {
