@@ -2677,6 +2677,48 @@ func excludedWith(fl FieldLevel) bool {
 	return true
 }
 
+// excludedWithAll is the validation function.
+// The field under validation must
+// not be present or is empty if all of the
+// other specified fields are present.
+func excludedWithAll(fl FieldLevel) bool {
+	params := parseOneOfParam(fl.Param())
+	for _, param := range params {
+		if requireCheckFieldKind(fl, param, true) {
+			return true
+		}
+	}
+
+	return !hasValue(fl)
+}
+
+// excludedWithout is the validation function.
+// The field under validation must
+// not be present or is empty when any of the
+// other specified fields are not present.
+func excludedWithout(fl FieldLevel) bool {
+	if requireCheckFieldKind(fl, strings.TrimSpace(fl.Param()), true) {
+		return !hasValue(fl)
+	} else {
+		return true
+	}
+}
+
+// excludedWithoutAll is the validation function.
+// The field under validation must
+// not be present or is empty when all of the
+// other specified fields are not present.
+func excludedWithoutAll(fl FieldLevel) bool {
+	params := parseOneOfParam(fl.Param())
+	for _, param := range params {
+		if !requireCheckFieldKind(fl, param, true) {
+			return true
+		}
+	}
+
+	return !hasValue(fl)
+}
+
 func tryCallValidateFn(field reflect.Value, validateFn string) (bool, error) {
 	method := field.MethodByName(validateFn)
 	if field.CanAddr() && !method.IsValid() {
