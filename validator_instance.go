@@ -260,6 +260,11 @@ func (v *Validate) RegisterCustomTypeFunc(fn CustomTypeFunc, types ...interface{
 	v.hasCustomFuncs = true
 }
 
+// SetTagName allows for changing of the default tag name of 'validate'.
+func (v *Validate) SetTagName(name string) {
+	v.tagName = name
+}
+
 func (v *Validate) registerValidation(tag string, fn FuncCtx, bakedIn bool, nilCheckable bool) error {
 	if len(tag) == 0 {
 		return errors.New("function Key cannot be empty")
