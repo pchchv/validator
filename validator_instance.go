@@ -10,29 +10,42 @@ import (
 )
 
 const (
-	defaultTagName     = "validate"
-	utf8HexComma       = "0x2C"
-	utf8Pipe           = "0x7C"
-	tagSeparator       = ","
-	orSeparator        = "|"
-	tagKeySeparator    = "="
-	structOnlyTag      = "structonly"
-	noStructLevelTag   = "nostructlevel"
-	omitzero           = "omitzero"
-	omitempty          = "omitempty"
-	omitnil            = "omitnil"
-	isdefault          = "isdefault"
-	skipValidationTag  = "-"
-	diveTag            = "dive"
-	keysTag            = "keys"
-	endKeysTag         = "endkeys"
-	requiredTag        = "required"
-	namespaceSeparator = "."
-	leftBracket        = "["
-	rightBracket       = "]"
-	restrictedTagChars = ".[],|=+()`~!@#$%^&*\\\"/?<>{}"
-	restrictedAliasErr = "Alias '%s' either contains restricted characters or is the same as a restricted tag needed for normal operation"
-	restrictedTagErr   = "Tag '%s' either contains restricted characters or is the same as a restricted tag needed for normal operation"
+	defaultTagName        = "validate"
+	utf8HexComma          = "0x2C"
+	utf8Pipe              = "0x7C"
+	tagSeparator          = ","
+	orSeparator           = "|"
+	tagKeySeparator       = "="
+	structOnlyTag         = "structonly"
+	noStructLevelTag      = "nostructlevel"
+	omitzero              = "omitzero"
+	omitempty             = "omitempty"
+	omitnil               = "omitnil"
+	isdefault             = "isdefault"
+	requiredWithoutAllTag = "required_without_all"
+	requiredWithoutTag    = "required_without"
+	requiredWithTag       = "required_with"
+	requiredWithAllTag    = "required_with_all"
+	requiredIfTag         = "required_if"
+	requiredUnlessTag     = "required_unless"
+	skipUnlessTag         = "skip_unless"
+	excludedWithoutAllTag = "excluded_without_all"
+	excludedWithoutTag    = "excluded_without"
+	excludedWithTag       = "excluded_with"
+	excludedWithAllTag    = "excluded_with_all"
+	excludedIfTag         = "excluded_if"
+	excludedUnlessTag     = "excluded_unless"
+	skipValidationTag     = "-"
+	diveTag               = "dive"
+	keysTag               = "keys"
+	endKeysTag            = "endkeys"
+	requiredTag           = "required"
+	namespaceSeparator    = "."
+	leftBracket           = "["
+	rightBracket          = "]"
+	restrictedTagChars    = ".[],|=+()`~!@#$%^&*\\\"/?<>{}"
+	restrictedAliasErr    = "Alias '%s' either contains restricted characters or is the same as a restricted tag needed for normal operation"
+	restrictedTagErr      = "Tag '%s' either contains restricted characters or is the same as a restricted tag needed for normal operation"
 )
 
 var (
@@ -70,6 +83,64 @@ type Validate struct {
 	hasTagNameFunc         bool
 	requiredStructEnabled  bool
 	privateFieldValidation bool
+}
+
+// New returns a new instance of 'validate' with sane defaults.
+// Validate is designed to be thread-safe and used as a singleton instance.
+// It caches information about your struct and validations,
+// in essence only parsing your validation tags once per struct type.
+// Using multiple instances neglects the benefit of caching.
+func New(options ...Option) *Validate {
+	tc := new(tagCache)
+	tc.m.Store(make(map[string]*cTag))
+	sc := new(structCache)
+	sc.m.Store(make(map[reflect.Type]*cStruct))
+	v := &Validate{
+		tagName:     defaultTagName,
+		aliases:     make(map[string]string, len(bakedInAliases)),
+		validations: make(map[string]internalValidationFuncWrapper, len(bakedInValidators)),
+		tagCache:    tc,
+		structCache: sc,
+	}
+
+	// must copy alias validators for separate validations
+	// to be used in each validator instance
+	for k, val := range bakedInAliases {
+		v.RegisterAlias(k, val)
+	}
+
+	// must copy validators for separate validations
+	// to be used in each instance
+	for k, val := range bakedInValidators {
+		switch k {
+		// these require that even if the value is nil that the validation should run,
+		// omitempty still overrides this behaviour
+		case requiredIfTag, requiredUnlessTag, requiredWithTag, requiredWithAllTag, requiredWithoutTag,
+			requiredWithoutAllTag, excludedIfTag, excludedUnlessTag, excludedWithTag, excludedWithAllTag,
+			excludedWithoutTag, excludedWithoutAllTag, skipUnlessTag:
+			_ = v.registerValidation(k, wrapFunc(val), true, true)
+		default:
+			// no need to error check here, baked in will always be valid
+			_ = v.registerValidation(k, wrapFunc(val), true, false)
+		}
+	}
+
+	v.pool = &sync.Pool{
+		New: func() interface{} {
+			return &validate{
+				v:        v,
+				ns:       make([]byte, 0, 64),
+				actualNs: make([]byte, 0, 64),
+				misc:     make([]byte, 32),
+			}
+		},
+	}
+
+	for _, o := range options {
+		o(v)
+	}
+
+	return v
 }
 
 // RegisterAlias registers a mapping of a single validation tag that defines a
