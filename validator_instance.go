@@ -184,7 +184,7 @@ func (v *Validate) RegisterStructValidation(fn StructLevelFunc, types ...interfa
 }
 
 // RegisterStructValidationCtx registers a StructLevelFuncCtx against a number of
-// types and allows passing of contextual validation information via context.Context.
+// types and allows passing of contextual validation information vis context.Context..
 //
 // NOTE: this method is not thread-safe it is intended that these all be registered prior to any validation.
 func (v *Validate) RegisterStructValidationCtx(fn StructLevelFuncCtx, types ...interface{}) {
@@ -309,7 +309,7 @@ func (v *Validate) Struct(s interface{}) error {
 
 // StructPartialCtx validates the fields passed in only,
 // ignoring all others and allows passing of contextual
-// validation information via context.Context.
+// validation information vis context.Context..
 // Fields may be provided in a namespaced fashion relative to the struct provided
 // e. g. NestedStruct.Field or NestedArrayField[0].Struct.Name.
 //
@@ -384,6 +384,56 @@ func (v *Validate) StructPartialCtx(ctx context.Context, s interface{}, fields .
 // To access the error array, assert the error unless it is nil, e.g. err.(validator.ValidationErrors).
 func (v *Validate) StructPartial(s interface{}, fields ...string) error {
 	return v.StructPartialCtx(context.Background(), s, fields...)
+}
+
+// StructFilteredCtx validates a structs exposed fields,
+// that pass the FilterFunc check and automatically validates nested structs,
+// unless otherwise specified and also allows passing of contextual validation information vis context.Context.
+//
+// It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
+// To access the error array, assert the error unless it is nil, e.g. err.(validator.ValidationErrors).
+func (v *Validate) StructFilteredCtx(ctx context.Context, s interface{}, fn FilterFunc) (err error) {
+	val := reflect.ValueOf(s)
+	top := val
+
+	if val.Kind() == reflect.Ptr && !val.IsNil() {
+		val = val.Elem()
+	}
+
+	if val.Kind() != reflect.Struct || val.Type().ConvertibleTo(timeType) {
+		return &InvalidValidationError{Type: reflect.TypeOf(s)}
+	}
+
+	// good to validate
+	vd := v.pool.Get().(*validate)
+	vd.top = top
+	vd.isPartial = true
+	vd.ffn = fn
+	// vd.hasExcludes = false // only need to reset in StructPartial and StructExcept
+
+	vd.validateStruct(ctx, top, val, val.Type(), vd.ns[0:0], vd.actualNs[0:0], nil)
+
+	if len(vd.errs) > 0 {
+		err = vd.errs
+		vd.errs = nil
+	}
+
+	v.pool.Put(vd)
+
+	return
+}
+
+// StructFiltered validates a structs exposed fields,
+// that pass the FilterFunc check and automatically validates nested structs,
+// unless otherwise specified.
+//
+// It returns InvalidValidationError for
+// bad values passed in and nil or ValidationErrors as error otherwise.
+// To access the error array,
+// assert the error unless it is nil,
+// e.g. err.(validator.ValidationErrors).
+func (v *Validate) StructFiltered(s interface{}, fn FilterFunc) error {
+	return v.StructFilteredCtx(context.Background(), s, fn)
 }
 
 func (v *Validate) registerValidation(tag string, fn FuncCtx, bakedIn bool, nilCheckable bool) error {
