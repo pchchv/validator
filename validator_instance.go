@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -263,6 +264,47 @@ func (v *Validate) RegisterCustomTypeFunc(fn CustomTypeFunc, types ...interface{
 // SetTagName allows for changing of the default tag name of 'validate'.
 func (v *Validate) SetTagName(name string) {
 	v.tagName = name
+}
+
+// StructCtx validates a structs exposed fields,
+// and automatically validates nested structs, unless otherwise specified
+// and also allows passing of context.Context for contextual validation information.
+//
+// It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
+// To access the error array, assert the error unless it is nil, e.g. err.(validator.ValidationErrors).
+func (v *Validate) StructCtx(ctx context.Context, s interface{}) (err error) {
+	val := reflect.ValueOf(s)
+	top := val
+	if val.Kind() == reflect.Ptr && !val.IsNil() {
+		val = val.Elem()
+	}
+
+	if val.Kind() != reflect.Struct || val.Type().ConvertibleTo(timeType) {
+		return &InvalidValidationError{Type: reflect.TypeOf(s)}
+	}
+
+	// good to validate
+	vd := v.pool.Get().(*validate)
+	vd.top = top
+	vd.isPartial = false
+	// vd.hasExcludes = false // only need to reset in StructPartial and StructExcept
+	vd.validateStruct(ctx, top, val, val.Type(), vd.ns[0:0], vd.actualNs[0:0], nil)
+	if len(vd.errs) > 0 {
+		err = vd.errs
+		vd.errs = nil
+	}
+
+	v.pool.Put(vd)
+	return
+}
+
+// Struct validates a structs exposed fields,
+// and automatically validates nested structs, unless otherwise specified.
+//
+// It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
+// To access the error array, assert the error unless it is nil, e.g. err.(validator.ValidationErrors).
+func (v *Validate) Struct(s interface{}) error {
+	return v.StructCtx(context.Background(), s)
 }
 
 func (v *Validate) registerValidation(tag string, fn FuncCtx, bakedIn bool, nilCheckable bool) error {
