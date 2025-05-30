@@ -184,7 +184,7 @@ func (v *Validate) RegisterStructValidation(fn StructLevelFunc, types ...interfa
 }
 
 // RegisterStructValidationCtx registers a StructLevelFuncCtx against a number of
-// types and allows passing of contextual validation information vis context.Context..
+// types and allows passing of contextual validation information vis context.Context.
 //
 // NOTE: this method is not thread-safe it is intended that these all be registered prior to any validation.
 func (v *Validate) RegisterStructValidationCtx(fn StructLevelFuncCtx, types ...interface{}) {
@@ -309,7 +309,7 @@ func (v *Validate) Struct(s interface{}) error {
 
 // StructPartialCtx validates the fields passed in only,
 // ignoring all others and allows passing of contextual
-// validation information vis context.Context..
+// validation information vis context.Context.
 // Fields may be provided in a namespaced fashion relative to the struct provided
 // e. g. NestedStruct.Field or NestedArrayField[0].Struct.Name.
 //
@@ -605,6 +605,40 @@ func (v *Validate) VarWithValueCtx(ctx context.Context, field interface{}, other
 // Validate Array, Slice and maps fields which may contain more than one error
 func (v *Validate) VarWithValue(field interface{}, other interface{}, tag string) error {
 	return v.VarWithValueCtx(context.Background(), field, other, tag)
+}
+
+// ValidateMapCtx validates a map using a map of
+// validation rules and allows passing of
+// contextual validation information vis context.Context.
+func (v Validate) ValidateMapCtx(ctx context.Context, data map[string]interface{}, rules map[string]interface{}) map[string]interface{} {
+	errs := make(map[string]interface{})
+	for field, rule := range rules {
+		if ruleObj, ok := rule.(map[string]interface{}); ok {
+			if dataObj, ok := data[field].(map[string]interface{}); ok {
+				if err := v.ValidateMapCtx(ctx, dataObj, ruleObj); len(err) > 0 {
+					errs[field] = err
+				}
+			} else if dataObjs, ok := data[field].([]map[string]interface{}); ok {
+				for _, obj := range dataObjs {
+					if err := v.ValidateMapCtx(ctx, obj, ruleObj); len(err) > 0 {
+						errs[field] = err
+					}
+				}
+			} else {
+				errs[field] = errors.New("The field: '" + field + "' is not a map to dive")
+			}
+		} else if ruleStr, ok := rule.(string); ok {
+			if err := v.VarCtx(ctx, data[field], ruleStr); err != nil {
+				errs[field] = err
+			}
+		}
+	}
+	return errs
+}
+
+// ValidateMap validates map data from a map of tags.
+func (v *Validate) ValidateMap(data map[string]interface{}, rules map[string]interface{}) map[string]interface{} {
+	return v.ValidateMapCtx(context.Background(), data, rules)
 }
 
 func (v *Validate) registerValidation(tag string, fn FuncCtx, bakedIn bool, nilCheckable bool) error {
