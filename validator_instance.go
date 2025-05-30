@@ -307,6 +307,85 @@ func (v *Validate) Struct(s interface{}) error {
 	return v.StructCtx(context.Background(), s)
 }
 
+// StructPartialCtx validates the fields passed in only,
+// ignoring all others and allows passing of contextual
+// validation information via context.Context.
+// Fields may be provided in a namespaced fashion relative to the struct provided
+// e. g. NestedStruct.Field or NestedArrayField[0].Struct.Name.
+//
+// It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
+// To access the error array, assert the error unless it is nil, e.g. err.(validator.ValidationErrors).
+func (v *Validate) StructPartialCtx(ctx context.Context, s interface{}, fields ...string) (err error) {
+	val := reflect.ValueOf(s)
+	top := val
+	if val.Kind() == reflect.Ptr && !val.IsNil() {
+		val = val.Elem()
+	}
+
+	if val.Kind() != reflect.Struct || val.Type().ConvertibleTo(timeType) {
+		return &InvalidValidationError{Type: reflect.TypeOf(s)}
+	}
+
+	// good to validate
+	vd := v.pool.Get().(*validate)
+	vd.top = top
+	vd.isPartial = true
+	vd.ffn = nil
+	vd.hasExcludes = false
+	vd.includeExclude = make(map[string]struct{})
+	typ := val.Type()
+	name := typ.Name()
+	for _, k := range fields {
+		flds := strings.Split(k, namespaceSeparator)
+		if len(flds) > 0 {
+			vd.misc = append(vd.misc[0:0], name...)
+			// don't append empty name for unnamed structs
+			if len(vd.misc) != 0 {
+				vd.misc = append(vd.misc, '.')
+			}
+
+			for _, s := range flds {
+				if idx := strings.Index(s, leftBracket); idx != -1 {
+					for idx != -1 {
+						vd.misc = append(vd.misc, s[:idx]...)
+						vd.includeExclude[string(vd.misc)] = struct{}{}
+						idx2 := strings.Index(s, rightBracket)
+						idx2++
+						vd.misc = append(vd.misc, s[idx:idx2]...)
+						vd.includeExclude[string(vd.misc)] = struct{}{}
+						s = s[idx2:]
+						idx = strings.Index(s, leftBracket)
+					}
+				} else {
+					vd.misc = append(vd.misc, s...)
+					vd.includeExclude[string(vd.misc)] = struct{}{}
+				}
+
+				vd.misc = append(vd.misc, '.')
+			}
+		}
+	}
+
+	vd.validateStruct(ctx, top, val, typ, vd.ns[0:0], vd.actualNs[0:0], nil)
+	if len(vd.errs) > 0 {
+		err = vd.errs
+		vd.errs = nil
+	}
+
+	v.pool.Put(vd)
+	return
+}
+
+// StructPartial validates the fields passed in only, ignoring all others.
+// Fields may be provided in a namespaced fashion relative to the struct provided
+// e. g. NestedStruct.Field or NestedArrayField[0].Struct.Name
+//
+// It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
+// To access the error array, assert the error unless it is nil, e.g. err.(validator.ValidationErrors).
+func (v *Validate) StructPartial(s interface{}, fields ...string) error {
+	return v.StructPartialCtx(context.Background(), s, fields...)
+}
+
 func (v *Validate) registerValidation(tag string, fn FuncCtx, bakedIn bool, nilCheckable bool) error {
 	if len(tag) == 0 {
 		return errors.New("function Key cannot be empty")
