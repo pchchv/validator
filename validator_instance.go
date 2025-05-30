@@ -509,7 +509,7 @@ func (v *Validate) StructExcept(s interface{}, fields ...string) error {
 // It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
 // To access the error array, assert the error unless it is nil,
 // e. g. err.(validator.ValidationErrors).
-// validate Array, Slice and maps fields which may contain more than one error.
+// Validate Array, Slice and maps fields which may contain more than one error.
 func (v *Validate) VarCtx(ctx context.Context, field interface{}, tag string) (err error) {
 	if len(tag) == 0 || tag == skipValidationTag {
 		return nil
@@ -547,6 +547,64 @@ func (v *Validate) VarCtx(ctx context.Context, field interface{}, tag string) (e
 // Validate Array, Slice and maps fields which may contain more than one error
 func (v *Validate) Var(field interface{}, tag string) error {
 	return v.VarCtx(context.Background(), field, tag)
+}
+
+// VarWithValueCtx validates a single variable,
+// against another variable/field's value using tag style validation and
+// allows passing of contextual validation information vis context.Context.
+// E. g.
+//
+//	s1 := "abcd"
+//	s2 := "abcd"
+//	validate.VarWithValue(s1, s2, "eqcsfield") // returns true
+//
+// WARNING: a struct can be passed for validation,
+// e. g. time.Time is a struct or if you have a custom type and have registered a custom type handler,
+// so must allow it.
+// However unforeseen validations will occur if trying to validate a struct that is meant to be passed to 'validate.Struct'.
+//
+// It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
+// To access the error array, assert the error unless it is nil,
+// e. g. err.(validator.ValidationErrors).
+// Validate Array, Slice and maps fields which may contain more than one error
+func (v *Validate) VarWithValueCtx(ctx context.Context, field interface{}, other interface{}, tag string) (err error) {
+	if len(tag) == 0 || tag == skipValidationTag {
+		return nil
+	}
+
+	ctag := v.fetchCacheTag(tag)
+	otherVal := reflect.ValueOf(other)
+	vd := v.pool.Get().(*validate)
+	vd.top = otherVal
+	vd.isPartial = false
+	vd.traverseField(ctx, otherVal, reflect.ValueOf(field), vd.ns[0:0], vd.actualNs[0:0], defaultCField, ctag)
+	if len(vd.errs) > 0 {
+		err = vd.errs
+		vd.errs = nil
+	}
+
+	v.pool.Put(vd)
+	return
+}
+
+// VarWithValue validates a single variable, against another variable/field's value using tag style validation.
+// E. g.
+//
+//	s1 := "abcd"
+//	s2 := "abcd"
+//	validate.VarWithValue(s1, s2, "eqcsfield") // returns true
+//
+// WARNING: a struct can be passed for validation,
+// e. g. time.Time is a struct or if you have a custom type and have registered a custom type handler,
+// so must allow it.
+// However unforeseen validations will occur if trying to validate a struct that is meant to be passed to 'validate.Struct'
+//
+// It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
+// To access the error array, assert the error unless it is nil,
+// e. g. err.(validator.ValidationErrors).
+// Validate Array, Slice and maps fields which may contain more than one error
+func (v *Validate) VarWithValue(field interface{}, other interface{}, tag string) error {
+	return v.VarWithValueCtx(context.Background(), field, other, tag)
 }
 
 func (v *Validate) registerValidation(tag string, fn FuncCtx, bakedIn bool, nilCheckable bool) error {
