@@ -271,7 +271,7 @@ func (v *Validate) SetTagName(name string) {
 // and also allows passing of context.Context for contextual validation information.
 //
 // It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
-// To access the error array, assert the error unless it is nil, e.g. err.(validator.ValidationErrors).
+// To access the error array, assert the error unless it is nil, e. g. err.(validator.ValidationErrors).
 func (v *Validate) StructCtx(ctx context.Context, s interface{}) (err error) {
 	val := reflect.ValueOf(s)
 	top := val
@@ -302,7 +302,7 @@ func (v *Validate) StructCtx(ctx context.Context, s interface{}) (err error) {
 // and automatically validates nested structs, unless otherwise specified.
 //
 // It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
-// To access the error array, assert the error unless it is nil, e.g. err.(validator.ValidationErrors).
+// To access the error array, assert the error unless it is nil, e. g. err.(validator.ValidationErrors).
 func (v *Validate) Struct(s interface{}) error {
 	return v.StructCtx(context.Background(), s)
 }
@@ -314,7 +314,7 @@ func (v *Validate) Struct(s interface{}) error {
 // e. g. NestedStruct.Field or NestedArrayField[0].Struct.Name.
 //
 // It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
-// To access the error array, assert the error unless it is nil, e.g. err.(validator.ValidationErrors).
+// To access the error array, assert the error unless it is nil, e. g. err.(validator.ValidationErrors).
 func (v *Validate) StructPartialCtx(ctx context.Context, s interface{}, fields ...string) (err error) {
 	val := reflect.ValueOf(s)
 	top := val
@@ -381,7 +381,7 @@ func (v *Validate) StructPartialCtx(ctx context.Context, s interface{}, fields .
 // e. g. NestedStruct.Field or NestedArrayField[0].Struct.Name
 //
 // It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
-// To access the error array, assert the error unless it is nil, e.g. err.(validator.ValidationErrors).
+// To access the error array, assert the error unless it is nil, e. g. err.(validator.ValidationErrors).
 func (v *Validate) StructPartial(s interface{}, fields ...string) error {
 	return v.StructPartialCtx(context.Background(), s, fields...)
 }
@@ -391,7 +391,7 @@ func (v *Validate) StructPartial(s interface{}, fields ...string) error {
 // unless otherwise specified and also allows passing of contextual validation information vis context.Context.
 //
 // It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
-// To access the error array, assert the error unless it is nil, e.g. err.(validator.ValidationErrors).
+// To access the error array, assert the error unless it is nil, e. g. err.(validator.ValidationErrors).
 func (v *Validate) StructFilteredCtx(ctx context.Context, s interface{}, fn FilterFunc) (err error) {
 	val := reflect.ValueOf(s)
 	top := val
@@ -431,7 +431,7 @@ func (v *Validate) StructFilteredCtx(ctx context.Context, s interface{}, fn Filt
 // bad values passed in and nil or ValidationErrors as error otherwise.
 // To access the error array,
 // assert the error unless it is nil,
-// e.g. err.(validator.ValidationErrors).
+// e. g. err.(validator.ValidationErrors).
 func (v *Validate) StructFiltered(s interface{}, fn FilterFunc) error {
 	return v.StructFilteredCtx(context.Background(), s, fn)
 }
@@ -442,7 +442,7 @@ func (v *Validate) StructFiltered(s interface{}, fn FilterFunc) error {
 // i. e. NestedStruct.Field or NestedArrayField[0].Struct.Name
 //
 // It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
-// To access the error array, assert the error unless it is nil, e.g. err.(validator.ValidationErrors).
+// To access the error array, assert the error unless it is nil, e. g. err.(validator.ValidationErrors).
 func (v *Validate) StructExceptCtx(ctx context.Context, s interface{}, fields ...string) (err error) {
 	val := reflect.ValueOf(s)
 	top := val
@@ -489,9 +489,64 @@ func (v *Validate) StructExceptCtx(ctx context.Context, s interface{}, fields ..
 // i. e. NestedStruct.Field or NestedArrayField[0].Struct.Name
 //
 // It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
-// To access the error array, assert the error unless it is nil, e.g. err.(validator.ValidationErrors).
+// To access the error array, assert the error unless it is nil, e. g. err.(validator.ValidationErrors).
 func (v *Validate) StructExcept(s interface{}, fields ...string) error {
 	return v.StructExceptCtx(context.Background(), s, fields...)
+}
+
+// VarCtx validates a single variable using tag style validation and allows passing of
+// contextual validation information vis context.Context.
+// E. g.
+//
+//	var i int
+//	validate.Var(i, "gt=1,lt=10")
+//
+// WARNING: a struct can be passed for validation,
+// e. g. time.Time is a struct or if you have a custom type and have registered a custom type handler,
+// so must allow it.
+// However unforeseen validations will occur if trying to validate a struct that is meant to be passed to 'validate.Struct'.
+//
+// It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
+// To access the error array, assert the error unless it is nil,
+// e. g. err.(validator.ValidationErrors).
+// validate Array, Slice and maps fields which may contain more than one error.
+func (v *Validate) VarCtx(ctx context.Context, field interface{}, tag string) (err error) {
+	if len(tag) == 0 || tag == skipValidationTag {
+		return nil
+	}
+
+	ctag := v.fetchCacheTag(tag)
+	val := reflect.ValueOf(field)
+	vd := v.pool.Get().(*validate)
+	vd.top = val
+	vd.isPartial = false
+	vd.traverseField(ctx, val, val, vd.ns[0:0], vd.actualNs[0:0], defaultCField, ctag)
+	if len(vd.errs) > 0 {
+		err = vd.errs
+		vd.errs = nil
+	}
+
+	v.pool.Put(vd)
+	return
+}
+
+// Var validates a single variable using tag style validation.
+// E. g.
+//
+//	var i int
+//	validate.Var(i, "gt=1,lt=10")
+//
+// WARNING: a struct can be passed for validation,
+// e. g. time.Time is a struct or if you have a custom type and have registered a custom type handler,
+// so must allow it.
+// However unforeseen validations will occur if trying to validate a struct that is meant to be passed to 'validate.Struct'.
+//
+// It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
+// To access the error array, assert the error unless it is nil,
+// e. g. err.(validator.ValidationErrors).
+// Validate Array, Slice and maps fields which may contain more than one error
+func (v *Validate) Var(field interface{}, tag string) error {
+	return v.VarCtx(context.Background(), field, tag)
 }
 
 func (v *Validate) registerValidation(tag string, fn FuncCtx, bakedIn bool, nilCheckable bool) error {
