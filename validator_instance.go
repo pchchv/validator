@@ -436,6 +436,64 @@ func (v *Validate) StructFiltered(s interface{}, fn FilterFunc) error {
 	return v.StructFilteredCtx(context.Background(), s, fn)
 }
 
+// StructExceptCtx validates all fields except the
+// ones passed in and allows passing of contextual validation information vis context.Context.
+// Fields may be provided in a namespaced fashion relative to the struct provided
+// i. e. NestedStruct.Field or NestedArrayField[0].Struct.Name
+//
+// It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
+// To access the error array, assert the error unless it is nil, e.g. err.(validator.ValidationErrors).
+func (v *Validate) StructExceptCtx(ctx context.Context, s interface{}, fields ...string) (err error) {
+	val := reflect.ValueOf(s)
+	top := val
+	if val.Kind() == reflect.Ptr && !val.IsNil() {
+		val = val.Elem()
+	}
+
+	if val.Kind() != reflect.Struct || val.Type().ConvertibleTo(timeType) {
+		return &InvalidValidationError{Type: reflect.TypeOf(s)}
+	}
+
+	// good to validate
+	vd := v.pool.Get().(*validate)
+	vd.top = top
+	vd.isPartial = true
+	vd.ffn = nil
+	vd.hasExcludes = true
+	vd.includeExclude = make(map[string]struct{})
+	typ := val.Type()
+	name := typ.Name()
+	for _, key := range fields {
+		vd.misc = vd.misc[0:0]
+		if len(name) > 0 {
+			vd.misc = append(vd.misc, name...)
+			vd.misc = append(vd.misc, '.')
+		}
+
+		vd.misc = append(vd.misc, key...)
+		vd.includeExclude[string(vd.misc)] = struct{}{}
+	}
+
+	vd.validateStruct(ctx, top, val, typ, vd.ns[0:0], vd.actualNs[0:0], nil)
+	if len(vd.errs) > 0 {
+		err = vd.errs
+		vd.errs = nil
+	}
+
+	v.pool.Put(vd)
+	return
+}
+
+// StructExcept validates all fields except the ones passed in.
+// Fields may be provided in a namespaced fashion relative to the struct provided
+// i. e. NestedStruct.Field or NestedArrayField[0].Struct.Name
+//
+// It returns InvalidValidationError for bad values passed in and nil or ValidationErrors as error otherwise.
+// To access the error array, assert the error unless it is nil, e.g. err.(validator.ValidationErrors).
+func (v *Validate) StructExcept(s interface{}, fields ...string) error {
+	return v.StructExceptCtx(context.Background(), s, fields...)
+}
+
 func (v *Validate) registerValidation(tag string, fn FuncCtx, bakedIn bool, nilCheckable bool) error {
 	if len(tag) == 0 {
 		return errors.New("function Key cannot be empty")
