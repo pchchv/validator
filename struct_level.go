@@ -5,6 +5,8 @@ import (
 	"reflect"
 )
 
+var _ StructLevel = new(validate)
+
 // StructLevel contains all the information and helper functions to validate the structure.
 type StructLevel interface {
 	// Validator returns the main validation object, in case one wants to call validations internally.
