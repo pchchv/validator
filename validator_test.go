@@ -8352,6 +8352,1152 @@ func TestOmitZero(t *testing.T) {
 	})
 }
 
+func TestAlphaUnicodeValidation(t *testing.T) {
+	tests := []struct {
+		param    string
+		expected bool
+	}{
+		{"", false},
+		{"abc", true},
+		{"this is a test string", false},
+		{"这是一个测试字符串", true},
+		{"123", false},
+		{"<>@;.-=", false},
+		{"ひらがな・カタカナ、．漢字", false},
+		{"あいうえおfoobar", true},
+		{"test＠example.com", false},
+		{"1234abcDE", false},
+		{"ｶﾀｶﾅ", true},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.param, "alphaunicode")
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d Alpha Unicode failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d Alpha Unicode failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "alphaunicode" {
+					t.Fatalf("Index: %d Alpha Unicode failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestAlphanumericUnicodeValidation(t *testing.T) {
+	tests := []struct {
+		param    string
+		expected bool
+	}{
+		{"", false},
+		{"abc", true},
+		{"this is a test string", false},
+		{"这是一个测试字符串", true},
+		{"\u0031\u0032\u0033", true}, // unicode 5
+		{"123", true},
+		{"<>@;.-=", false},
+		{"ひらがな・カタカナ、．漢字", false},
+		{"あいうえおfoobar", true},
+		{"test＠example.com", false},
+		{"1234abcDE", true},
+		{"ｶﾀｶﾅ", true},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.param, "alphanumunicode")
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d Alphanum Unicode failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d Alphanum Unicode failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "alphanumunicode" {
+					t.Fatalf("Index: %d Alphanum Unicode failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestHostnameRFC952Validation(t *testing.T) {
+	tests := []struct {
+		param    string
+		expected bool
+	}{
+		{"test.example.com", true},
+		{"example.com", true},
+		{"example24.com", true},
+		{"test.example24.com", true},
+		{"test24.example24.com", true},
+		{"example", true},
+		{"EXAMPLE", true},
+		{"1.foo.com", false},
+		{"test.example.com.", false},
+		{"example.com.", false},
+		{"example24.com.", false},
+		{"test.example24.com.", false},
+		{"test24.example24.com.", false},
+		{"example.", false},
+		{"192.168.0.1", false},
+		{"email@example.com", false},
+		{"2001:cdba:0000:0000:0000:0000:3257:9652", false},
+		{"2001:cdba:0:0:0:0:3257:9652", false},
+		{"2001:cdba::3257:9652", false},
+		{"example..........com", false},
+		{"1234", false},
+		{"abc1234", true},
+		{"example. com", false},
+		{"ex ample.com", false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.param, "hostname")
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d hostname failed Error: %v", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d hostname failed Error: %v", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "hostname" {
+					t.Fatalf("Index: %d hostname failed Error: %v", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestHostnameRFC1123Validation(t *testing.T) {
+	tests := []struct {
+		param    string
+		expected bool
+	}{
+		{"test.example.com", true},
+		{"example.com", true},
+		{"example24.com", true},
+		{"test.example24.com", true},
+		{"test24.example24.com", true},
+		{"example", true},
+		{"1.foo.com", true},
+		{"test.example.com.", false},
+		{"example.com.", false},
+		{"example24.com.", false},
+		{"test.example24.com.", false},
+		{"test24.example24.com.", false},
+		{"example.", false},
+		{"test_example", false},
+		{"192.168.0.1", true},
+		{"email@example.com", false},
+		{"2001:cdba:0000:0000:0000:0000:3257:9652", false},
+		{"2001:cdba:0:0:0:0:3257:9652", false},
+		{"2001:cdba::3257:9652", false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.param, "hostname_rfc1123")
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Hostname: %v failed Error: %v", test, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Hostname: %v failed Error: %v", test, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "hostname_rfc1123" {
+					t.Fatalf("Hostname: %v failed Error: %v", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestHostnameRFC1123AliasValidation(t *testing.T) {
+	tests := []struct {
+		param    string
+		expected bool
+	}{
+		{"test.example.com", true},
+		{"example.com", true},
+		{"example24.com", true},
+		{"test.example24.com", true},
+		{"test24.example24.com", true},
+		{"example", true},
+		{"1.foo.com", true},
+		{"test.example.com.", false},
+		{"example.com.", false},
+		{"example24.com.", false},
+		{"test.example24.com.", false},
+		{"test24.example24.com.", false},
+		{"example.", false},
+		{"test_example", false},
+		{"192.168.0.1", true},
+		{"email@example.com", false},
+		{"2001:cdba:0000:0000:0000:0000:3257:9652", false},
+		{"2001:cdba:0:0:0:0:3257:9652", false},
+		{"2001:cdba::3257:9652", false},
+	}
+
+	validate := New()
+	validate.RegisterAlias("hostname", "hostname_rfc1123")
+	for i, test := range tests {
+		errs := validate.Var(test.param, "hostname")
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d hostname failed Error: %v", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d hostname failed Error: %v", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "hostname" {
+					t.Fatalf("Index: %d hostname failed Error: %v", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestFQDNValidation(t *testing.T) {
+	tests := []struct {
+		param    string
+		expected bool
+	}{
+		{"test.example.com", true},
+		{"example.com", true},
+		{"example24.com", true},
+		{"test.example24.com", true},
+		{"test24.example24.com", true},
+		{"test.example.com.", true},
+		{"example.com.", true},
+		{"example24.com.", true},
+		{"test.example24.com.", true},
+		{"test24.example24.com.", true},
+		{"24.example24.com", true},
+		{"test.24.example.com", true},
+		{"test24.example24.com..", false},
+		{"example", false},
+		{"192.168.0.1", false},
+		{"email@example.com", false},
+		{"2001:cdba:0000:0000:0000:0000:3257:9652", false},
+		{"2001:cdba:0:0:0:0:3257:9652", false},
+		{"2001:cdba::3257:9652", false},
+		{"", false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.param, "fqdn")
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d fqdn failed Error: %v", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d fqdn failed Error: %v", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "fqdn" {
+					t.Fatalf("Index: %d fqdn failed Error: %v", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestUniqueValidationStructSlice(t *testing.T) {
+	testStructs := []struct {
+		A string
+		B string
+	}{
+		{A: "one", B: "two"},
+		{A: "one", B: "three"},
+	}
+
+	tests := []struct {
+		target   interface{}
+		param    string
+		expected bool
+	}{
+		{testStructs, "unique", true},
+		{testStructs, "unique=A", false},
+		{testStructs, "unique=B", true},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.target, test.param)
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d unique failed Error: %v", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d unique failed Error: %v", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "unique" {
+					t.Fatalf("Index: %d unique failed Error: %v", i, errs)
+				}
+			}
+		}
+	}
+
+	PanicMatches(t, func() { _ = validate.Var(testStructs, "unique=C") }, "Bad field name C")
+}
+
+func TestHTMLValidation(t *testing.T) {
+	tests := []struct {
+		param    string
+		expected bool
+	}{
+		{"<html>", true},
+		{"<script>", true},
+		{"<stillworks>", true},
+		{"</html", false},
+		{"</script>", true},
+		{"<//script>", false},
+		{"<123nonsense>", false},
+		{"test", false},
+		{"&example", false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.param, "html")
+
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d html failed Error: %v", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d html failed Error: %v", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "html" {
+					t.Fatalf("Index: %d html failed Error: %v", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestHTMLEncodedValidation(t *testing.T) {
+	tests := []struct {
+		param    string
+		expected bool
+	}{
+		{"&#x3c;", true},
+		{"&#xaf;", true},
+		{"&#x00;", true},
+		{"&#xf0;", true},
+		{"&#x3c", true},
+		{"&#xaf", true},
+		{"&#x00", true},
+		{"&#xf0", true},
+		{"&#ab", true},
+		{"&lt;", true},
+		{"&gt;", true},
+		{"&quot;", true},
+		{"&amp;", true},
+		{"#x0a", false},
+		{"&x00", false},
+		{"&#x1z", false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.param, "html_encoded")
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d html_encoded failed Error: %v", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d html_encoded failed Error: %v", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "html_encoded" {
+					t.Fatalf("Index: %d html_encoded failed Error: %v", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestURLEncodedValidation(t *testing.T) {
+	tests := []struct {
+		param    string
+		expected bool
+	}{
+		{"%20", true},
+		{"%af", true},
+		{"%ff", true},
+		{"<%az", false},
+		{"%test%", false},
+		{"a%b", false},
+		{"1%2", false},
+		{"%%a%%", false},
+		{"hello", true},
+		{"", true},
+		{"+", true},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.param, "url_encoded")
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d url_encoded failed Error: %v", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d url_encoded failed Error: %v", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "url_encoded" {
+					t.Fatalf("Index: %d url_encoded failed Error: %v", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestJSONValidation(t *testing.T) {
+	tests := []struct {
+		param    interface{}
+		expected bool
+	}{
+		{`foo`, false},
+		{`}{`, false},
+		{`{]`, false},
+		{`{}`, true},
+		{`{"foo":"bar"}`, true},
+		{`{"foo":"bar","bar":{"baz":["qux"]}}`, true},
+		{`{"foo": 3 "bar": 4}`, false},
+		{`{"foo": 3 ,"bar": 4`, false},
+		{`{foo": 3, "bar": 4}`, false},
+		{`foo`, false},
+		{`1`, true},
+		{`true`, true},
+		{`null`, true},
+		{`"null"`, true},
+		{json.RawMessage(`foo`), false},
+		{json.RawMessage(`}{`), false},
+		{json.RawMessage(`{]`), false},
+		{json.RawMessage(`{}`), true},
+		{json.RawMessage(`{"foo":"bar"}`), true},
+		{json.RawMessage(`{"foo":"bar","bar":{"baz":["qux"]}}`), true},
+		{json.RawMessage(`{"foo": 3 "bar": 4}`), false},
+		{json.RawMessage(`{"foo": 3 ,"bar": 4`), false},
+		{json.RawMessage(`{foo": 3, "bar": 4}`), false},
+		{json.RawMessage(`foo`), false},
+		{json.RawMessage(`1`), true},
+		{json.RawMessage(`true`), true},
+		{json.RawMessage(`null`), true},
+		{json.RawMessage(`"null"`), true},
+		{[]byte(`foo`), false},
+		{[]byte(`}{`), false},
+		{[]byte(`{]`), false},
+		{[]byte(`{}`), true},
+		{[]byte(`{"foo":"bar"}`), true},
+		{[]byte(`{"foo":"bar","bar":{"baz":["qux"]}}`), true},
+		{[]byte(`{"foo": 3 "bar": 4}`), false},
+		{[]byte(`{"foo": 3 ,"bar": 4`), false},
+		{[]byte(`{foo": 3, "bar": 4}`), false},
+		{[]byte(`foo`), false},
+		{[]byte(`1`), true},
+		{[]byte(`true`), true},
+		{[]byte(`null`), true},
+		{[]byte(`"null"`), true},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.param, "json")
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d json failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d json failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "json" {
+					t.Fatalf("Index: %d json failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+
+	PanicMatches(t, func() {
+		_ = validate.Var(2, "json")
+	}, "Bad field type int")
+}
+
+func TestJWTValidation(t *testing.T) {
+	tests := []struct {
+		param    string
+		expected bool
+	}{
+		{"eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoiZ29waGVyIn0.O_bROM_szPq9qBql-XDHMranHwP48ODdoLICWzqBr_U", true},
+		{"acb123-_.def456-_.ghi789-_", true},
+		{"eyJhbGciOiJOT05FIn0.e30.", true},
+		{"eyJhbGciOiJOT05FIn0.e30.\n", false},
+		{"\x00.\x00.\x00", false},
+		{"", false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.param, "jwt")
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d jwt failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d jwt failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "jwt" {
+					t.Fatalf("Index: %d jwt failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestLowercaseValidation(t *testing.T) {
+	tests := []struct {
+		param    string
+		expected bool
+	}{
+		{`abcdefg`, true},
+		{`Abcdefg`, false},
+		{"", false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.param, "lowercase")
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d lowercase failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d lowercase failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "lowercase" {
+					t.Fatalf("Index: %d lowercase failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+
+	PanicMatches(t, func() {
+		_ = validate.Var(2, "lowercase")
+	}, "Bad field type int")
+}
+
+func TestUppercaseValidation(t *testing.T) {
+	tests := []struct {
+		param    string
+		expected bool
+	}{
+		{`ABCDEFG`, true},
+		{`aBCDEFG`, false},
+		{"", false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.param, "uppercase")
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d uppercase failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d uppercase failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "uppercase" {
+					t.Fatalf("Index: %d uppercase failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+
+	PanicMatches(t, func() {
+		_ = validate.Var(2, "uppercase")
+	}, "Bad field type int")
+}
+
+func TestDatetimeValidation(t *testing.T) {
+	tests := []struct {
+		value    string `validate:"datetime=2006-01-02"`
+		tag      string
+		expected bool
+	}{
+		{"2008-02-01", `datetime=2006-01-02`, true},
+		{"2008-Feb-01", `datetime=2006-01-02`, false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.value, test.tag)
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d datetime failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d datetime failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "datetime" {
+					t.Fatalf("Index: %d datetime failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+
+	PanicMatches(t, func() {
+		_ = validate.Var(2, "datetime")
+	}, "Bad field type int")
+}
+
+func TestTimeZoneValidation(t *testing.T) {
+	tests := []struct {
+		value    string `validate:"timezone"`
+		tag      string
+		expected bool
+	}{
+		// systems may have different time zone database, some systems time zone are case insensitive
+		{"America/New_York", `timezone`, true},
+		{"UTC", `timezone`, true},
+		{"", `timezone`, false},
+		{"Local", `timezone`, false},
+		{"Unknown", `timezone`, false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.value, test.tag)
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d time zone failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d time zone failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "timezone" {
+					t.Fatalf("Index: %d time zone failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+
+	PanicMatches(t, func() {
+		_ = validate.Var(2, "timezone")
+	}, "Bad field type int")
+}
+
+func TestBCP47LanguageTagValidation(t *testing.T) {
+	tests := []struct {
+		value    string `validate:"bcp47_language_tag"`
+		tag      string
+		expected bool
+	}{
+		{"en-US", "bcp47_language_tag", true},
+		{"en_GB", "bcp47_language_tag", true},
+		{"es", "bcp47_language_tag", true},
+		{"English", "bcp47_language_tag", false},
+		{"ESES", "bcp47_language_tag", false},
+		{"az-Cyrl-AZ", "bcp47_language_tag", true},
+		{"en-029", "bcp47_language_tag", true},
+		{"xog", "bcp47_language_tag", true},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.value, test.tag)
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d locale failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d locale failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "bcp47_language_tag" {
+					t.Fatalf("Index: %d locale failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+
+	PanicMatches(t, func() {
+		_ = validate.Var(2, "bcp47_language_tag")
+	}, "Bad field type int")
+}
+
+func TestBicIsoFormatValidation(t *testing.T) {
+	tests := []struct {
+		value    string `validate:"bic"`
+		tag      string
+		expected bool
+	}{
+		{"SBICKEN1345", "bic", true},
+		{"SBICKEN1", "bic", true},
+		{"SBICKENY", "bic", true},
+		{"SBICKEN1YYP", "bic", true},
+		{"SBIC23NXXX", "bic", false},
+		{"S23CKENXXXX", "bic", false},
+		{"SBICKENXX", "bic", false},
+		{"SBICKENXX9", "bic", false},
+		{"SBICKEN13458", "bic", false},
+		{"SBICKEN", "bic", false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.value, test.tag)
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d bic failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d bic failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "bic" {
+					t.Fatalf("Index: %d bic failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestSemverFormatValidation(t *testing.T) {
+	tests := []struct {
+		value    string `validate:"semver"`
+		tag      string
+		expected bool
+	}{
+		{"1.2.3", "semver", true},
+		{"10.20.30", "semver", true},
+		{"1.1.2-prerelease+meta", "semver", true},
+		{"1.1.2+meta", "semver", true},
+		{"1.1.2+meta-valid", "semver", true},
+		{"1.0.0-alpha", "semver", true},
+		{"1.0.0-alpha.1", "semver", true},
+		{"1.0.0-alpha.beta", "semver", true},
+		{"1.0.0-alpha.beta.1", "semver", true},
+		{"1.0.0-alpha0.valid", "semver", true},
+		{"1.0.0-alpha.0valid", "semver", true},
+		{"1.0.0-alpha-a.b-c-somethinglong+build.1-aef.1-its-okay", "semver", true},
+		{"1.0.0-rc.1+build.1", "semver", true},
+		{"1.0.0-rc.1+build.123", "semver", true},
+		{"1.2.3-beta", "semver", true},
+		{"1.2.3-DEV-SNAPSHOT", "semver", true},
+		{"1.2.3-SNAPSHOT-123", "semver", true},
+		{"2.0.0+build.1848", "semver", true},
+		{"2.0.1-alpha.1227", "semver", true},
+		{"1.0.0-alpha+beta", "semver", true},
+		{"1.2.3----RC-SNAPSHOT.12.9.1--.12+788", "semver", true},
+		{"1.2.3----R-S.12.9.1--.12+meta", "semver", true},
+		{"1.2.3----RC-SNAPSHOT.12.9.1--.12", "semver", true},
+		{"1.0.0+0.build.1-rc.10000aaa-kk-0.1", "semver", true},
+		{"99999999999999999999999.999999999999999999.99999999999999999", "semver", true},
+		{"1.0.0-0A.is.legal", "semver", true},
+		{"1", "semver", false},
+		{"1.2", "semver", false},
+		{"1.2.3-0123", "semver", false},
+		{"1.2.3-0123.0123", "semver", false},
+		{"1.1.2+.123", "semver", false},
+		{"+invalid", "semver", false},
+		{"-invalid", "semver", false},
+		{"-invalid+invalid", "semver", false},
+		{"alpha", "semver", false},
+		{"alpha.beta.1", "semver", false},
+		{"alpha.1", "semver", false},
+		{"1.0.0-alpha_beta", "semver", false},
+		{"1.0.0-alpha_beta", "semver", false},
+		{"1.0.0-alpha...1", "semver", false},
+		{"01.1.1", "semver", false},
+		{"1.01.1", "semver", false},
+		{"1.1.01", "semver", false},
+		{"1.2", "semver", false},
+		{"1.2.Dev", "semver", false},
+		{"1.2.3.Dev", "semver", false},
+		{"1.2-SNAPSHOT", "semver", false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.value, test.tag)
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d semver failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d semver failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "semver" {
+					t.Fatalf("Index: %d semver failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestCveFormatValidation(t *testing.T) {
+	tests := []struct {
+		value    string `validate:"cve"`
+		tag      string
+		expected bool
+	}{
+		{"CVE-1999-0001", "cve", true},
+		{"CVE-1998-0001", "cve", false},
+		{"CVE-2000-0001", "cve", true},
+		{"CVE-2222-0001", "cve", true},
+		{"2222-0001", "cve", false},
+		{"-2222-0001", "cve", false},
+		{"CVE22220001", "cve", false},
+		{"CVE-2222-000001", "cve", false},
+		{"CVE-2222-100001", "cve", true},
+		{"CVE-2222-99999999999", "cve", true},
+		{"CVE-3000-0001", "cve", false},
+		{"CVE-1999-0000", "cve", false},
+		{"CVE-2099-0000", "cve", false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.value, test.tag)
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d cve failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d cve failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "cve" {
+					t.Fatalf("Index: %d cve failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestRFC1035LabelFormatValidation(t *testing.T) {
+	tests := []struct {
+		value    string `validate:"dns_rfc1035_label"`
+		tag      string
+		expected bool
+	}{
+		{"abc", "dns_rfc1035_label", true},
+		{"abc-", "dns_rfc1035_label", false},
+		{"abc-123", "dns_rfc1035_label", true},
+		{"ABC", "dns_rfc1035_label", false},
+		{"ABC-123", "dns_rfc1035_label", false},
+		{"abc-abc", "dns_rfc1035_label", true},
+		{"ABC-ABC", "dns_rfc1035_label", false},
+		{"123-abc", "dns_rfc1035_label", false},
+		{"", "dns_rfc1035_label", false},
+		{"abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk", "dns_rfc1035_label", true},
+		{"abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijkl", "dns_rfc1035_label", false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.value, test.tag)
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d dns_rfc1035_label failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d dns_rfc1035_label failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "dns_rfc1035_label" {
+					t.Fatalf("Index: %d dns_rfc1035_label failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestMongoDBObjectIDFormatValidation(t *testing.T) {
+	tests := []struct {
+		value    string `validate:"mongodb"`
+		tag      string
+		expected bool
+	}{
+		{"507f191e810c19729de860ea", "mongodb", true},
+		{"507f191e810c19729de860eG", "mongodb", false},
+		{"M07f191e810c19729de860eG", "mongodb", false},
+		{"07f191e810c19729de860ea", "mongodb", false},
+		{"507f191e810c19729de860e", "mongodb", false},
+		{"507f191e810c19729de860ea4", "mongodb", false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.value, test.tag)
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d mongodb failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d mongodb failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "mongodb" {
+					t.Fatalf("Index: %d mongodb failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestMongoDBConnectionStringFormatValidation(t *testing.T) {
+	tests := []struct {
+		value    string `validate:"mongodb_connection_string"`
+		tag      string
+		expected bool
+	}{
+		{"mongodb://username:password@server.example.com:20017/database?replicaSet=test&connectTimeoutMS=300000&ssl=true", "mongodb_connection_string", true},
+		{"mongodb+srv://username:password@server.example.com:20017/database?replicaSet=test&connectTimeoutMS=300000&ssl=true", "mongodb_connection_string", true},
+		{"mongodb+srv://username:password@server.example.com:20017,server.example.com,server.example.com:20017/database?replicaSet=test&connectTimeoutMS=300000&ssl=true", "mongodb_connection_string", true},
+		{"mongodb+srv://username:password@server.example.com:20017,server.example.com,server.example.com:20017?replicaSet=test&connectTimeoutMS=300000&ssl=true", "mongodb_connection_string", true},
+		{"mongodb://username:password@server.example.com:20017,server.example.com,server.example.com:20017/database?replicaSet=test&connectTimeoutMS=300000&ssl=true", "mongodb_connection_string", true},
+		{"mongodb://localhost", "mongodb_connection_string", true},
+		{"mongodb://localhost:27017", "mongodb_connection_string", true},
+		{"localhost", "mongodb_connection_string", false},
+		{"mongodb://", "mongodb_connection_string", false},
+		{"mongodb+srv://", "mongodb_connection_string", false},
+		{"mongodbsrv://localhost", "mongodb_connection_string", false},
+		{"mongodb+srv://localhost", "mongodb_connection_string", true},
+		{"mongodb+srv://localhost:27017", "mongodb_connection_string", true},
+		{"mongodb+srv://localhost?replicaSet=test", "mongodb_connection_string", true},
+		{"mongodb+srv://localhost:27017?replicaSet=test", "mongodb_connection_string", true},
+		{"mongodb+srv://localhost:27017?", "mongodb_connection_string", false},
+		{"mongodb+srv://localhost:27017?replicaSet", "mongodb_connection_string", false},
+		{"mongodb+srv://localhost/database", "mongodb_connection_string", true},
+		{"mongodb+srv://localhost:27017/database", "mongodb_connection_string", true},
+		{"mongodb+srv://username@localhost", "mongodb_connection_string", false},
+		{"mongodb+srv://username:password@localhost", "mongodb_connection_string", true},
+		{"mongodb+srv://username:password@localhost:27017", "mongodb_connection_string", true},
+		{"mongodb+srv://username:password@localhost:27017,192.0.0.7,192.0.0.9:27018,server.example.com", "mongodb_connection_string", true},
+	}
+
+	validate := New()
+
+	for i, test := range tests {
+		errs := validate.Var(test.value, test.tag)
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d mongodb_connection_string failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d mongodb_connection_string failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "mongodb_connection_string" {
+					t.Fatalf("Index: %d mongodb_connection_string failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestSpiceDBValueFormatValidation(t *testing.T) {
+	tests := []struct {
+		value    string
+		tag      string
+		expected bool
+	}{
+		// Must be an asterisk OR a string containing alphanumeric characters and a restricted set a special symbols: _ | / - = +
+		{"*", "spicedb=id", true},
+		{`azAZ09_|/-=+`, "spicedb=id", true},
+		{`a*`, "spicedb=id", false},
+		{`/`, "spicedb=id", true},
+		{"*", "spicedb", true},
+
+		// Must begin and end with a lowercase letter, may also contain numbers and underscores between, min length 3, max length 64
+		{"a", "spicedb=permission", false},
+		{"1", "spicedb=permission", false},
+		{"a1", "spicedb=permission", false},
+		{"a_b", "spicedb=permission", true},
+		{"A_b", "spicedb=permission", false},
+		{"a_B", "spicedb=permission", false},
+		{"abcdefghijklmnopqrstuvwxyz_0123456789_abcdefghijklmnopqrstuvwxyz", "spicedb=permission", true},
+		{"abcdefghijklmnopqrstuvwxyz_01234_56789_abcdefghijklmnopqrstuvwxyz", "spicedb=permission", false},
+
+		// Object types follow the same rules as permissions for the type name plus an optional prefix up to 63 characters with a /
+		{"a", "spicedb=type", false},
+		{"1", "spicedb=type", false},
+		{"a1", "spicedb=type", false},
+		{"a_b", "spicedb=type", true},
+		{"A_b", "spicedb=type", false},
+		{"a_B", "spicedb=type", false},
+		{"abcdefghijklmnopqrstuvwxyz_0123456789_abcdefghijklmnopqrstuvwxyz", "spicedb=type", true},
+		{"abcdefghijklmnopqrstuvwxyz_01234_56789_abcdefghijklmnopqrstuvwxyz", "spicedb=type", false},
+
+		{`a_b/a`, "spicedb=type", false},
+		{`a_b/1`, "spicedb=type", false},
+		{`a_b/a1`, "spicedb=type", false},
+		{`a_b/a_b`, "spicedb=type", true},
+		{`a_b/A_b`, "spicedb=type", false},
+		{`a_b/a_B`, "spicedb=type", false},
+		{`a_b/abcdefghijklmnopqrstuvwxyz_0123456789_abcdefghijklmnopqrstuvwxyz`, "spicedb=type", true},
+		{`a_b/abcdefghijklmnopqrstuvwxyz_01234_56789_abcdefghijklmnopqrstuvwxyz`, "spicedb=type", false},
+
+		{`a/a_b`, "spicedb=type", false},
+		{`1/a_b`, "spicedb=type", false},
+		{`a1/a_b`, "spicedb=type", false},
+		{`a_b/a_b`, "spicedb=type", true},
+		{`A_b/a_b`, "spicedb=type", false},
+		{`a_B/a_b`, "spicedb=type", false},
+		{`abcdefghijklmnopqrstuvwxyz_0123456789_abcdefghijklmnopqrstuvwxy/a_b`, "spicedb=type", true},
+		{`abcdefghijklmnopqrstuvwxyz_0123456789_abcdefghijklmnopqrstuvwxyz/a_b`, "spicedb=type", false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.value, test.tag)
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d spicedb failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d spicedb - expected error but there was none.", i)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "spicedb" {
+					t.Fatalf("Index: %d spicedb failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestCreditCardFormatValidation(t *testing.T) {
+	tests := []struct {
+		value    string `validate:"credit_card"`
+		tag      string
+		expected bool
+	}{
+		{"586824160825533338", "credit_card", true},
+		{"586824160825533328", "credit_card", false},
+		{"4624748233249780", "credit_card", true},
+		{"4624748233349780", "credit_card", false},
+		{"378282246310005", "credit_card", true},
+		{"378282146310005", "credit_card", false},
+		{"4624 7482 3324 9780", "credit_card", true},
+		{"4624 7482 3324  9780", "credit_card", false},
+		{"4624 7482 3324 978A", "credit_card", false},
+		{"4624 7482 332", "credit_card", false},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.value, test.tag)
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d credit_card failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d credit_card failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "credit_card" {
+					t.Fatalf("Index: %d credit_card failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+}
+
+func TestLuhnChecksumValidation(t *testing.T) {
+	testsUint := []struct {
+		value    interface{} `validate:"luhn_checksum"` // the type is interface{} because the luhn_checksum works on both strings and numbers
+		tag      string
+		expected bool
+	}{
+		{uint64(586824160825533338), "luhn_checksum", true}, // credit card numbers are just special cases of numbers with luhn checksum
+		{586824160825533338, "luhn_checksum", true},
+		{"586824160825533338", "luhn_checksum", true},
+		{uint64(586824160825533328), "luhn_checksum", false},
+		{586824160825533328, "luhn_checksum", false},
+		{"586824160825533328", "luhn_checksum", false},
+		{10000000116, "luhn_checksum", true}, // but there may be shorter numbers (11 digits)
+		{"10000000116", "luhn_checksum", true},
+		{10000000117, "luhn_checksum", false},
+		{"10000000117", "luhn_checksum", false},
+		{uint64(12345678123456789011), "luhn_checksum", true}, // or longer numbers (19 digits)
+		{"12345678123456789011", "luhn_checksum", true},
+		{1, "luhn_checksum", false}, // single digits (checksum only) are not allowed
+		{"1", "luhn_checksum", false},
+		{-10, "luhn_checksum", false}, // negative ints are not allowed
+		{"abcdefghijklmnop", "luhn_checksum", false},
+	}
+
+	validate := New()
+	for i, test := range testsUint {
+		errs := validate.Var(test.value, test.tag)
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d luhn_checksum failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d luhn_checksum failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "luhn_checksum" {
+					t.Fatalf("Index: %d luhn_checksum failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+}
+
 func AssertError(t *testing.T, err error, nsKey, structNsKey, field, structField, expectedTag string) {
 	var found bool
 	var fe FieldError
