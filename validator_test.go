@@ -26,6 +26,10 @@ type StructLevelInvalidErr struct {
 	Value string
 }
 
+type I interface {
+	Foo() string
+}
+
 type TestStruct struct {
 	String string `validate:"required" json:"StringVal"`
 }
