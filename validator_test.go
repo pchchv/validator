@@ -12187,6 +12187,59 @@ func TestStructLevelValidationsPointerPassing(t *testing.T) {
 	AssertError(t, errs, "TestStruct.StringVal", "TestStruct.String", "StringVal", "String", "badvalueteststruct")
 }
 
+func TestInvalidStruct(t *testing.T) {
+	validate := New()
+	s := &SubTest{
+		Test: "1",
+	}
+	err := validate.Struct(s.Test)
+	NotEqual(t, err, nil)
+	Equal(t, err.Error(), "validator: (nil string)")
+
+	err = validate.Struct(nil)
+	NotEqual(t, err, nil)
+	Equal(t, err.Error(), "validator: (nil)")
+
+	err = validate.StructPartial(nil, "SubTest.Test")
+	NotEqual(t, err, nil)
+	Equal(t, err.Error(), "validator: (nil)")
+
+	err = validate.StructExcept(nil, "SubTest.Test")
+	NotEqual(t, err, nil)
+	Equal(t, err.Error(), "validator: (nil)")
+}
+
+func TestInvalidValidatorFunction(t *testing.T) {
+	validate := New()
+	s := &SubTest{
+		Test: "1",
+	}
+
+	PanicMatches(t, func() { _ = validate.Var(s.Test, "zzxxBadFunction") }, "Undefined validation function 'zzxxBadFunction' on field ''")
+}
+
+func TestStructLevelInvalidError(t *testing.T) {
+	validate := New()
+	validate.RegisterStructValidation(StructLevelInvalidError, StructLevelInvalidErr{})
+
+	var test StructLevelInvalidErr
+	err := validate.Struct(test)
+	NotEqual(t, err, nil)
+
+	errs, ok := err.(ValidationErrors)
+	Equal(t, ok, true)
+
+	fe := errs[0]
+	Equal(t, fe.Field(), "Value")
+	Equal(t, fe.StructField(), "Value")
+	Equal(t, fe.Namespace(), "StructLevelInvalidErr.Value")
+	Equal(t, fe.StructNamespace(), "StructLevelInvalidErr.Value")
+	Equal(t, fe.Tag(), "required")
+	Equal(t, fe.ActualTag(), "required")
+	Equal(t, fe.Kind(), reflect.Invalid)
+	Equal(t, fe.Type(), reflect.TypeOf(nil))
+}
+
 func AssertError(t *testing.T, err error, nsKey, structNsKey, field, structField, expectedTag string) {
 	var found bool
 	var fe FieldError
