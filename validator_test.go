@@ -26,6 +26,18 @@ type StructLevelInvalidErr struct {
 	Value string
 }
 
+type TestStructReturnValidationErrorsInner2 struct {
+	String string `validate:"required" json:"JSONString"`
+}
+
+type TestStructReturnValidationErrorsInner1 struct {
+	Inner2 *TestStructReturnValidationErrorsInner2
+}
+
+type TestStructReturnValidationErrors struct {
+	Inner1 *TestStructReturnValidationErrorsInner1 `json:"Inner1JSON"`
+}
+
 func TestCrossNamespaceFieldValidation(t *testing.T) {
 	type SliceStruct struct {
 		Name string
