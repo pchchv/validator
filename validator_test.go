@@ -30,6 +30,14 @@ type I interface {
 	Foo() string
 }
 
+type Impl struct {
+	F string `validate:"len=3"`
+}
+
+func (i *Impl) Foo() string {
+	return i.F
+}
+
 type TestStruct struct {
 	String string `validate:"required" json:"StringVal"`
 }
