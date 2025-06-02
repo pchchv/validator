@@ -1358,3 +1358,40 @@ func TestEINStringValidation(t *testing.T) {
 		}
 	}
 }
+
+func AssertError(t *testing.T, err error, nsKey, structNsKey, field, structField, expectedTag string) {
+	var found bool
+	var fe FieldError
+	errs := err.(ValidationErrors)
+	for i := 0; i < len(errs); i++ {
+		if errs[i].Namespace() == nsKey && errs[i].StructNamespace() == structNsKey {
+			found = true
+			fe = errs[i]
+			break
+		}
+	}
+
+	EqualSkip(t, 2, found, true)
+	NotEqualSkip(t, 2, fe, nil)
+	EqualSkip(t, 2, fe.Field(), field)
+	EqualSkip(t, 2, fe.StructField(), structField)
+	EqualSkip(t, 2, fe.Tag(), expectedTag)
+}
+
+func AssertDeepError(t *testing.T, err error, nsKey, structNsKey, field, structField, expectedTag, actualTag string) {
+	var found bool
+	var fe FieldError
+	errs := err.(ValidationErrors)
+	for i := 0; i < len(errs); i++ {
+		if errs[i].Namespace() == nsKey && errs[i].StructNamespace() == structNsKey && errs[i].Tag() == expectedTag && errs[i].ActualTag() == actualTag {
+			found = true
+			fe = errs[i]
+			break
+		}
+	}
+
+	EqualSkip(t, 2, found, true)
+	NotEqualSkip(t, 2, fe, nil)
+	EqualSkip(t, 2, fe.Field(), field)
+	EqualSkip(t, 2, fe.StructField(), structField)
+}
