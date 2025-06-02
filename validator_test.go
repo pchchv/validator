@@ -79,6 +79,25 @@ type TestInterface struct {
 	Iface I
 }
 
+type TestUint64 struct {
+	Required  uint64 `validate:"required"`
+	Len       uint64 `validate:"len=10"`
+	Min       uint64 `validate:"min=1"`
+	Max       uint64 `validate:"max=10"`
+	MinMax    uint64 `validate:"min=1,max=10"`
+	OmitEmpty uint64 `validate:"omitempty,min=1,max=10"`
+}
+
+type TestFloat64 struct {
+	Required  float64 `validate:"required"`
+	Len       float64 `validate:"len=10"`
+	Min       float64 `validate:"min=1"`
+	Max       float64 `validate:"max=10"`
+	MinMax    float64 `validate:"min=1,max=10"`
+	Lte       float64 `validate:"lte=10"`
+	OmitEmpty float64 `validate:"omitempty,min=1,max=10"`
+}
+
 func TestCrossNamespaceFieldValidation(t *testing.T) {
 	type SliceStruct struct {
 		Name string
