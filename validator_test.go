@@ -12195,18 +12195,6 @@ func AssertDeepError(t *testing.T, err error, nsKey, structNsKey, field, structF
 	EqualSkip(t, 2, fe.StructField(), structField)
 }
 
-func getError(err error, nsKey, structNsKey string) (fe FieldError) {
-	errs := err.(ValidationErrors)
-	for i := 0; i < len(errs); i++ {
-		if errs[i].Namespace() == nsKey && errs[i].StructNamespace() == structNsKey {
-			fe = errs[i]
-			break
-		}
-	}
-
-	return
-}
-
 func StructValidationTestStructSuccess(sl StructLevel) {
 	st := sl.Current().Interface().(TestStruct)
 	if st.String != "good value" {
@@ -12261,4 +12249,16 @@ func StructLevelInvalidError(sl StructLevel) {
 	if top.Value == s.Value {
 		sl.ReportError(nil, "Value", "Value", "required", "")
 	}
+}
+
+func getError(err error, nsKey, structNsKey string) (fe FieldError) {
+	errs := err.(ValidationErrors)
+	for i := 0; i < len(errs); i++ {
+		if errs[i].Namespace() == nsKey && errs[i].StructNamespace() == structNsKey {
+			fe = errs[i]
+			break
+		}
+	}
+
+	return
 }
