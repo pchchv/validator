@@ -67,6 +67,10 @@ type TestString struct {
 	Iface I
 }
 
+type TestInterface struct {
+	Iface I
+}
+
 func TestCrossNamespaceFieldValidation(t *testing.T) {
 	type SliceStruct struct {
 		Name string
