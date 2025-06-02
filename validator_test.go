@@ -98,6 +98,15 @@ type TestFloat64 struct {
 	OmitEmpty float64 `validate:"omitempty,min=1,max=10"`
 }
 
+type TestSlice struct {
+	Required  []int `validate:"required"`
+	Len       []int `validate:"len=10"`
+	Min       []int `validate:"min=1"`
+	Max       []int `validate:"max=10"`
+	MinMax    []int `validate:"min=1,max=10"`
+	OmitEmpty []int `validate:"omitempty,min=1,max=10"`
+}
+
 func TestCrossNamespaceFieldValidation(t *testing.T) {
 	type SliceStruct struct {
 		Name string
