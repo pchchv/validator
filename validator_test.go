@@ -22,6 +22,10 @@ type TestStruct struct {
 	String string `validate:"required" json:"StringVal"`
 }
 
+type StructLevelInvalidErr struct {
+	Value string
+}
+
 func TestCrossNamespaceFieldValidation(t *testing.T) {
 	type SliceStruct struct {
 		Name string
