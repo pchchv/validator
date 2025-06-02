@@ -46,6 +46,27 @@ type TestStructReturnValidationErrors struct {
 	Inner1 *TestStructReturnValidationErrorsInner1 `json:"Inner1JSON"`
 }
 
+type TestString struct {
+	BlankTag  string `validate:""`
+	Required  string `validate:"required"`
+	Len       string `validate:"len=10"`
+	Min       string `validate:"min=1"`
+	Max       string `validate:"max=10"`
+	MinMax    string `validate:"min=1,max=10"`
+	Lt        string `validate:"lt=10"`
+	Lte       string `validate:"lte=10"`
+	Gt        string `validate:"gt=10"`
+	Gte       string `validate:"gte=10"`
+	OmitEmpty string `validate:"omitempty,min=1,max=10"`
+	Boolean   string `validate:"boolean"`
+	Sub       *SubTest
+	SubIgnore *SubTest `validate:"-"`
+	Anonymous struct {
+		A string `validate:"required"`
+	}
+	Iface I
+}
+
 func TestCrossNamespaceFieldValidation(t *testing.T) {
 	type SliceStruct struct {
 		Name string
