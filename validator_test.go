@@ -12248,6 +12248,87 @@ func TestStructLevelInvalidError(t *testing.T) {
 	Equal(t, fe.Type(), reflect.TypeOf(nil))
 }
 
+func TestStructStringValidation(t *testing.T) {
+	validate := New()
+	tSuccess := &TestString{
+		Required:  "Required",
+		Len:       "length==10",
+		Min:       "min=1",
+		Max:       "1234567890",
+		MinMax:    "12345",
+		Lt:        "012345678",
+		Lte:       "0123456789",
+		Gt:        "01234567890",
+		Gte:       "0123456789",
+		Boolean:   "true",
+		OmitEmpty: "",
+		Sub: &SubTest{
+			Test: "1",
+		},
+		SubIgnore: &SubTest{
+			Test: "",
+		},
+		Anonymous: struct {
+			A string `validate:"required"`
+		}{
+			A: "1",
+		},
+		Iface: &Impl{
+			F: "123",
+		},
+	}
+
+	errs := validate.Struct(tSuccess)
+	Equal(t, errs, nil)
+
+	tFail := &TestString{
+		Required:  "",
+		Len:       "",
+		Min:       "",
+		Max:       "12345678901",
+		MinMax:    "",
+		Lt:        "0123456789",
+		Lte:       "01234567890",
+		Gt:        "1",
+		Gte:       "1",
+		OmitEmpty: "12345678901",
+		Boolean:   "nope",
+		Sub: &SubTest{
+			Test: "",
+		},
+		Anonymous: struct {
+			A string `validate:"required"`
+		}{
+			A: "",
+		},
+		Iface: &Impl{
+			F: "12",
+		},
+	}
+	errs = validate.Struct(tFail)
+	// Assert Top Level
+	NotEqual(t, errs, nil)
+	Equal(t, len(errs.(ValidationErrors)), 14)
+
+	// Assert Fields
+	AssertError(t, errs, "TestString.Required", "TestString.Required", "Required", "Required", "required")
+	AssertError(t, errs, "TestString.Len", "TestString.Len", "Len", "Len", "len")
+	AssertError(t, errs, "TestString.Min", "TestString.Min", "Min", "Min", "min")
+	AssertError(t, errs, "TestString.Max", "TestString.Max", "Max", "Max", "max")
+	AssertError(t, errs, "TestString.MinMax", "TestString.MinMax", "MinMax", "MinMax", "min")
+	AssertError(t, errs, "TestString.Lt", "TestString.Lt", "Lt", "Lt", "lt")
+	AssertError(t, errs, "TestString.Lte", "TestString.Lte", "Lte", "Lte", "lte")
+	AssertError(t, errs, "TestString.Gt", "TestString.Gt", "Gt", "Gt", "gt")
+	AssertError(t, errs, "TestString.Gte", "TestString.Gte", "Gte", "Gte", "gte")
+	AssertError(t, errs, "TestString.OmitEmpty", "TestString.OmitEmpty", "OmitEmpty", "OmitEmpty", "max")
+	AssertError(t, errs, "TestString.Boolean", "TestString.Boolean", "Boolean", "Boolean", "boolean")
+
+	// Nested Struct Field Errs
+	AssertError(t, errs, "TestString.Anonymous.A", "TestString.Anonymous.A", "A", "A", "required")
+	AssertError(t, errs, "TestString.Sub.Test", "TestString.Sub.Test", "Test", "Test", "required")
+	AssertError(t, errs, "TestString.Iface.F", "TestString.Iface.F", "F", "F", "len")
+}
+
 func AssertError(t *testing.T, err error, nsKey, structNsKey, field, structField, expectedTag string) {
 	var found bool
 	var fe FieldError
