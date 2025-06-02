@@ -18,12 +18,16 @@ import (
 	. "github.com/pchchv/go-assert"
 )
 
-type TestStruct struct {
-	String string `validate:"required" json:"StringVal"`
+type SubTest struct {
+	Test string `validate:"required"`
 }
 
 type StructLevelInvalidErr struct {
 	Value string
+}
+
+type TestStruct struct {
+	String string `validate:"required" json:"StringVal"`
 }
 
 type TestStructReturnValidationErrorsInner2 struct {
