@@ -18,6 +18,10 @@ import (
 	. "github.com/pchchv/go-assert"
 )
 
+type TestStruct struct {
+	String string `validate:"required" json:"StringVal"`
+}
+
 func TestCrossNamespaceFieldValidation(t *testing.T) {
 	type SliceStruct struct {
 		Name string
