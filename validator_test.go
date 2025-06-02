@@ -9498,6 +9498,115 @@ func TestLuhnChecksumValidation(t *testing.T) {
 	}
 }
 
+func TestNameNamespace(t *testing.T) {
+	type Inner2Namespace struct {
+		String []string `validate:"dive,required" json:"JSONString"`
+	}
+
+	type Inner1Namespace struct {
+		Inner2 *Inner2Namespace `json:"Inner2JSON"`
+	}
+
+	type Namespace struct {
+		Inner1 *Inner1Namespace `json:"Inner1JSON"`
+	}
+
+	validate := New()
+	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+
+		if name == "-" {
+			return ""
+		}
+
+		return name
+	})
+
+	i2 := &Inner2Namespace{String: []string{"ok", "ok", "ok"}}
+	i1 := &Inner1Namespace{Inner2: i2}
+	ns := &Namespace{Inner1: i1}
+	errs := validate.Struct(ns)
+	Equal(t, errs, nil)
+
+	i2.String[1] = ""
+	errs = validate.Struct(ns)
+	NotEqual(t, errs, nil)
+
+	ve := errs.(ValidationErrors)
+	Equal(t, len(ve), 1)
+	AssertError(t, errs, "Namespace.Inner1JSON.Inner2JSON.JSONString[1]", "Namespace.Inner1.Inner2.String[1]", "JSONString[1]", "String[1]", "required")
+
+	fe := getError(ve, "Namespace.Inner1JSON.Inner2JSON.JSONString[1]", "Namespace.Inner1.Inner2.String[1]")
+	NotEqual(t, fe, nil)
+	Equal(t, fe.Field(), "JSONString[1]")
+	Equal(t, fe.StructField(), "String[1]")
+	Equal(t, fe.Namespace(), "Namespace.Inner1JSON.Inner2JSON.JSONString[1]")
+	Equal(t, fe.StructNamespace(), "Namespace.Inner1.Inner2.String[1]")
+}
+
+func TestAnonymous(t *testing.T) {
+	validate := New()
+	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		if name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]; name != "-" {
+			return name
+		}
+
+		return ""
+	})
+
+	type Test struct {
+		Anonymous struct {
+			A string `validate:"required" json:"EH"`
+		}
+		AnonymousB struct {
+			B string `validate:"required" json:"BEE"`
+		}
+		anonymousC struct {
+			c string `validate:"required"`
+		}
+	}
+
+	tst := &Test{
+		Anonymous: struct {
+			A string `validate:"required" json:"EH"`
+		}{
+			A: "1",
+		},
+		AnonymousB: struct {
+			B string `validate:"required" json:"BEE"`
+		}{
+			B: "",
+		},
+		anonymousC: struct {
+			c string `validate:"required"`
+		}{
+			c: "",
+		},
+	}
+
+	Equal(t, tst.anonymousC.c, "")
+
+	err := validate.Struct(tst)
+	NotEqual(t, err, nil)
+
+	errs := err.(ValidationErrors)
+	Equal(t, len(errs), 1)
+	AssertError(t, errs, "Test.AnonymousB.BEE", "Test.AnonymousB.B", "BEE", "B", "required")
+
+	fe := getError(errs, "Test.AnonymousB.BEE", "Test.AnonymousB.B")
+	NotEqual(t, fe, nil)
+	Equal(t, fe.Field(), "BEE")
+	Equal(t, fe.StructField(), "B")
+
+	s := struct {
+		c string `validate:"required"`
+	}{
+		c: "",
+	}
+	err = validate.Struct(s)
+	Equal(t, err, nil)
+}
+
 func AssertError(t *testing.T, err error, nsKey, structNsKey, field, structField, expectedTag string) {
 	var found bool
 	var fe FieldError
