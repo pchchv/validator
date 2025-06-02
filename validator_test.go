@@ -9675,3 +9675,59 @@ func getError(err error, nsKey, structNsKey string) (fe FieldError) {
 
 	return
 }
+
+func StructValidationTestStructSuccess(sl StructLevel) {
+	st := sl.Current().Interface().(TestStruct)
+	if st.String != "good value" {
+		sl.ReportError(st.String, "StringVal", "String", "badvalueteststruct", "good value")
+	}
+}
+
+func StructValidationTestStruct(sl StructLevel) {
+	st := sl.Current().Interface().(TestStruct)
+	if st.String != "bad value" {
+		sl.ReportError(st.String, "StringVal", "String", "badvalueteststruct", "bad value")
+	}
+}
+
+func StructValidationNoTestStructCustomName(sl StructLevel) {
+	st := sl.Current().Interface().(TestStruct)
+	if st.String != "bad value" {
+		sl.ReportError(st.String, "String", "", "badvalueteststruct", "bad value")
+	}
+}
+
+func StructValidationTestStructInvalid(sl StructLevel) {
+	st := sl.Current().Interface().(TestStruct)
+	if st.String != "bad value" {
+		sl.ReportError(nil, "StringVal", "String", "badvalueteststruct", "bad value")
+	}
+}
+
+func StructValidationTestStructReturnValidationErrors(sl StructLevel) {
+	s := sl.Current().Interface().(TestStructReturnValidationErrors)
+	errs := sl.Validator().Struct(s.Inner1.Inner2)
+	if errs == nil {
+		return
+	}
+
+	sl.ReportValidationErrors("Inner1.", "Inner1.", errs.(ValidationErrors))
+}
+
+func StructValidationTestStructReturnValidationErrors2(sl StructLevel) {
+	s := sl.Current().Interface().(TestStructReturnValidationErrors)
+	errs := sl.Validator().Struct(s.Inner1.Inner2)
+	if errs == nil {
+		return
+	}
+
+	sl.ReportValidationErrors("Inner1JSON.", "Inner1.", errs.(ValidationErrors))
+}
+
+func StructLevelInvalidError(sl StructLevel) {
+	top := sl.Top().Interface().(StructLevelInvalidErr)
+	s := sl.Current().Interface().(StructLevelInvalidErr)
+	if top.Value == s.Value {
+		sl.ReportError(nil, "Value", "Value", "required", "")
+	}
+}
