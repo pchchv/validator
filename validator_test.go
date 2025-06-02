@@ -8388,3 +8388,15 @@ func AssertDeepError(t *testing.T, err error, nsKey, structNsKey, field, structF
 	EqualSkip(t, 2, fe.Field(), field)
 	EqualSkip(t, 2, fe.StructField(), structField)
 }
+
+func getError(err error, nsKey, structNsKey string) (fe FieldError) {
+	errs := err.(ValidationErrors)
+	for i := 0; i < len(errs); i++ {
+		if errs[i].Namespace() == nsKey && errs[i].StructNamespace() == structNsKey {
+			fe = errs[i]
+			break
+		}
+	}
+
+	return
+}
