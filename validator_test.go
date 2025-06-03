@@ -33,6 +33,16 @@ type StructLevelInvalidErr struct {
 	Value string
 }
 
+type MadeUpCustomType struct {
+	FirstName string
+	LastName  string
+}
+
+type CustomMadeUpStruct struct {
+	MadeUp        MadeUpCustomType `validate:"required"`
+	OverriddenInt int              `validate:"gt=1"`
+}
+
 type I interface {
 	Foo() string
 }
@@ -43,11 +53,6 @@ type Impl struct {
 
 func (i *Impl) Foo() string {
 	return i.F
-}
-
-type MadeUpCustomType struct {
-	FirstName string
-	LastName  string
 }
 
 type TestStruct struct {
