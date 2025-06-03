@@ -38,6 +38,11 @@ func (i *Impl) Foo() string {
 	return i.F
 }
 
+type MadeUpCustomType struct {
+	FirstName string
+	LastName  string
+}
+
 type TestStruct struct {
 	String string `validate:"required" json:"StringVal"`
 }
