@@ -12483,6 +12483,26 @@ func TestStructSliceValidation(t *testing.T) {
 	Equal(t, ok, true)
 }
 
+func TestNilValidator(t *testing.T) {
+	type TestStruct struct {
+		Test string `validate:"required"`
+	}
+
+	var val *Validate
+	ts := TestStruct{}
+	fn := func(fl FieldLevel) bool {
+		return fl.Parent().String() == fl.Field().String()
+	}
+
+	PanicMatches(t, func() { val.RegisterCustomTypeFunc(ValidateCustomType, MadeUpCustomType{}) }, "runtime error: invalid memory address or nil pointer dereference")
+	PanicMatches(t, func() { _ = val.RegisterValidation("something", fn) }, "runtime error: invalid memory address or nil pointer dereference")
+	PanicMatches(t, func() { _ = val.Var(ts.Test, "required") }, "runtime error: invalid memory address or nil pointer dereference")
+	PanicMatches(t, func() { _ = val.VarWithValue("test", ts.Test, "required") }, "runtime error: invalid memory address or nil pointer dereference")
+	PanicMatches(t, func() { _ = val.Struct(ts) }, "runtime error: invalid memory address or nil pointer dereference")
+	PanicMatches(t, func() { _ = val.StructExcept(ts, "Test") }, "runtime error: invalid memory address or nil pointer dereference")
+	PanicMatches(t, func() { _ = val.StructPartial(ts, "Test") }, "runtime error: invalid memory address or nil pointer dereference")
+}
+
 func AssertError(t *testing.T, err error, nsKey, structNsKey, field, structField, expectedTag string) {
 	var found bool
 	var fe FieldError
