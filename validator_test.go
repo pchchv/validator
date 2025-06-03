@@ -178,6 +178,10 @@ func (u uuidAlias) String() string {
 	return "This is a UUID " + string(u)
 }
 
+type valuer struct {
+	Name string
+}
+
 func TestCrossNamespaceFieldValidation(t *testing.T) {
 	type SliceStruct struct {
 		Name string
