@@ -19,7 +19,10 @@ import (
 	. "github.com/pchchv/go-assert"
 )
 
-var _ fmt.Stringer = uuidTestType{}
+var (
+	_ fmt.Stringer = uuidTestType{}
+	_ fmt.Stringer = uuidAlias("")
+)
 
 type SubTest struct {
 	Test string `validate:"required"`
@@ -138,6 +141,12 @@ type uuidTestType struct {
 
 func (u uuidTestType) String() string {
 	return u.val
+}
+
+type uuidAlias string
+
+func (u uuidAlias) String() string {
+	return "This is a UUID " + string(u)
 }
 
 func TestCrossNamespaceFieldValidation(t *testing.T) {
