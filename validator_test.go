@@ -12624,3 +12624,15 @@ func getError(err error, nsKey, structNsKey string) (fe FieldError) {
 
 	return
 }
+
+func stringPtr(v string) *string {
+	return &v
+}
+
+func intPtr(v int) *int {
+	return &v
+}
+
+func float64Ptr(v float64) *float64 {
+	return &v
+}
