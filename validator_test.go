@@ -13290,6 +13290,123 @@ func TestUUIDValidation(t *testing.T) {
 	}
 }
 
+func TestValidateFn(t *testing.T) {
+	t.Run("using pointer", func(t *testing.T) {
+		validate := New()
+
+		type Test struct {
+			String string
+			Inner  *NotRed `validate:"validateFn"`
+		}
+
+		var tt Test
+		errs := validate.Struct(tt)
+		NotEqual(t, errs, nil)
+
+		fe := errs.(ValidationErrors)[0]
+		Equal(t, fe.Field(), "Inner")
+		Equal(t, fe.Namespace(), "Test.Inner")
+		Equal(t, fe.Tag(), "validateFn")
+
+		tt.Inner = &NotRed{Color: "blue"}
+		errs = validate.Struct(tt)
+		Equal(t, errs, nil)
+
+		tt.Inner = &NotRed{Color: "red"}
+		errs = validate.Struct(tt)
+		NotEqual(t, errs, nil)
+
+		fe = errs.(ValidationErrors)[0]
+		Equal(t, fe.Field(), "Inner")
+		Equal(t, fe.Namespace(), "Test.Inner")
+		Equal(t, fe.Tag(), "validateFn")
+	})
+
+	t.Run("using struct", func(t *testing.T) {
+		validate := New()
+
+		type Test2 struct {
+			String string
+			Inner  NotRed `validate:"validateFn"`
+		}
+
+		var tt2 Test2
+		errs := validate.Struct(&tt2)
+		Equal(t, errs, nil)
+
+		tt2.Inner = NotRed{Color: "blue"}
+		errs = validate.Struct(&tt2)
+		Equal(t, errs, nil)
+
+		tt2.Inner = NotRed{Color: "red"}
+		errs = validate.Struct(&tt2)
+		NotEqual(t, errs, nil)
+
+		fe := errs.(ValidationErrors)[0]
+		Equal(t, fe.Field(), "Inner")
+		Equal(t, fe.Namespace(), "Test2.Inner")
+		Equal(t, fe.Tag(), "validateFn")
+	})
+
+	t.Run("using struct with custom function", func(t *testing.T) {
+		validate := New()
+
+		type Test2 struct {
+			String string
+			Inner  NotRed `validate:"validateFn=IsNotRed"`
+		}
+
+		var tt2 Test2
+		errs := validate.Struct(&tt2)
+		Equal(t, errs, nil)
+
+		tt2.Inner = NotRed{Color: "blue"}
+		errs = validate.Struct(&tt2)
+		Equal(t, errs, nil)
+
+		tt2.Inner = NotRed{Color: "red"}
+		errs = validate.Struct(&tt2)
+		NotEqual(t, errs, nil)
+
+		fe := errs.(ValidationErrors)[0]
+		Equal(t, fe.Field(), "Inner")
+		Equal(t, fe.Namespace(), "Test2.Inner")
+		Equal(t, fe.Tag(), "validateFn")
+	})
+
+	t.Run("try validate method with wrong signature or not existent", func(t *testing.T) {
+		validate := New()
+
+		type Test2 struct {
+			String string `validate:"validateFn=NotExists"` // should fail, method not found
+			Inner  NotRed `validate:"validateFn=DoNothing"` // should fail, return nothing
+			Inner2 NotRed `validate:"validateFn=String"`    // should fail, wrong return (must be error or bool)
+		}
+
+		var tt2 Test2
+		err := validate.Struct(&tt2)
+		NotEqual(t, err, nil)
+
+		errs := err.(ValidationErrors)
+		Equal(t, len(errs), 3)
+
+		fe := errs[0]
+		Equal(t, fe.Field(), "String")
+		Equal(t, fe.Namespace(), "Test2.String")
+		Equal(t, fe.Tag(), "validateFn")
+
+		fe = errs[1]
+		Equal(t, fe.Field(), "Inner")
+		Equal(t, fe.Namespace(), "Test2.Inner")
+		Equal(t, fe.Tag(), "validateFn")
+
+		fe = errs[2]
+		Equal(t, fe.Field(), "Inner2")
+		Equal(t, fe.Namespace(), "Test2.Inner2")
+		Equal(t, fe.Tag(), "validateFn")
+	})
+}
+
 func AssertError(t *testing.T, err error, nsKey, structNsKey, field, structField, expectedTag string) {
 	var found bool
 	var fe FieldError
