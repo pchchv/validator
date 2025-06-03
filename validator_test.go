@@ -3,6 +3,7 @@ package validator
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"database/sql/driver"
 	"encoding/base64"
 	"encoding/json"
@@ -13421,6 +13422,102 @@ func TestValidateFn(t *testing.T) {
 		Equal(t, fe.Namespace(), "Test2.Inner2")
 		Equal(t, fe.Tag(), "validateFn")
 	})
+}
+
+func TestSQLValue2Validation(t *testing.T) {
+	validate := New()
+	validate.RegisterCustomTypeFunc(ValidateValuerType, valuer{}, (*driver.Valuer)(nil), sql.NullString{}, sql.NullInt64{}, sql.NullBool{}, sql.NullFloat64{})
+	validate.RegisterCustomTypeFunc(ValidateCustomType, MadeUpCustomType{})
+	validate.RegisterCustomTypeFunc(OverrideIntTypeForSomeReason, 1)
+
+	val := valuer{
+		Name: "",
+	}
+	errs := validate.Var(val, "required")
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "", "", "", "", "required")
+
+	val.Name = "Valid Name"
+	errs = validate.VarCtx(context.Background(), val, "required")
+	Equal(t, errs, nil)
+
+	val.Name = "errorme"
+	PanicMatches(t, func() { _ = validate.Var(val, "required") }, "SQL Driver Valuer error: some kind of error")
+
+	myVal := valuer{
+		Name: "",
+	}
+	errs = validate.Var(myVal, "required")
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "", "", "", "", "required")
+
+	cust := MadeUpCustomType{
+		FirstName: "Joey",
+		LastName:  "Bloggs",
+	}
+
+	c := CustomMadeUpStruct{MadeUp: cust, OverriddenInt: 2}
+	errs = validate.Struct(c)
+	Equal(t, errs, nil)
+
+	c.MadeUp.FirstName = ""
+	c.OverriddenInt = 1
+	errs = validate.Struct(c)
+	NotEqual(t, errs, nil)
+	Equal(t, len(errs.(ValidationErrors)), 2)
+	AssertError(t, errs, "CustomMadeUpStruct.MadeUp", "CustomMadeUpStruct.MadeUp", "MadeUp", "MadeUp", "required")
+	AssertError(t, errs, "CustomMadeUpStruct.OverriddenInt", "CustomMadeUpStruct.OverriddenInt", "OverriddenInt", "OverriddenInt", "gt")
+}
+
+func TestSQLValueValidation(t *testing.T) {
+	validate := New()
+	validate.RegisterCustomTypeFunc(ValidateValuerType, (*driver.Valuer)(nil), valuer{})
+	validate.RegisterCustomTypeFunc(ValidateCustomType, MadeUpCustomType{})
+	validate.RegisterCustomTypeFunc(OverrideIntTypeForSomeReason, 1)
+	val := valuer{
+		Name: "",
+	}
+	errs := validate.Var(val, "required")
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "", "", "", "", "required")
+
+	val.Name = "Valid Name"
+	errs = validate.Var(val, "required")
+	Equal(t, errs, nil)
+
+	val.Name = "errorme"
+	PanicMatches(t, func() { errs = validate.Var(val, "required") }, "SQL Driver Valuer error: some kind of error")
+
+	myVal := valuer{
+		Name: "",
+	}
+	errs = validate.Var(myVal, "required")
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "", "", "", "", "required")
+
+	cust := MadeUpCustomType{
+		FirstName: "Joey",
+		LastName:  "Bloggs",
+	}
+	c := CustomMadeUpStruct{MadeUp: cust, OverriddenInt: 2}
+	errs = validate.Struct(c)
+	Equal(t, errs, nil)
+
+	c.MadeUp.FirstName = ""
+	c.OverriddenInt = 1
+	errs = validate.Struct(c)
+	NotEqual(t, errs, nil)
+	Equal(t, len(errs.(ValidationErrors)), 2)
+	AssertError(t, errs, "CustomMadeUpStruct.MadeUp", "CustomMadeUpStruct.MadeUp", "MadeUp", "MadeUp", "required")
+	AssertError(t, errs, "CustomMadeUpStruct.OverriddenInt", "CustomMadeUpStruct.OverriddenInt", "OverriddenInt", "OverriddenInt", "gt")
+
+	// Test for empty field on structs without tags
+	type InvalidValuePanicSafetyTest struct {
+		V valuer
+	}
+
+	errs = validate.Struct(InvalidValuePanicSafetyTest{})
+	Equal(t, errs, nil)
 }
 
 func AssertError(t *testing.T, err error, nsKey, structNsKey, field, structField, expectedTag string) {
