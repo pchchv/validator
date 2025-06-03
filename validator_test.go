@@ -19,6 +19,8 @@ import (
 	. "github.com/pchchv/go-assert"
 )
 
+var _ fmt.Stringer = uuidTestType{}
+
 type SubTest struct {
 	Test string `validate:"required"`
 }
@@ -128,6 +130,14 @@ type TestPartial struct {
 			OtherTest string `validate:"required"`
 		} `validate:"required,dive"`
 	}
+}
+
+type uuidTestType struct {
+	val string
+}
+
+func (u uuidTestType) String() string {
+	return u.val
 }
 
 func TestCrossNamespaceFieldValidation(t *testing.T) {
