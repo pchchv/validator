@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"database/sql/driver"
 	"encoding/base64"
@@ -12807,6 +12808,458 @@ func TestPrivateFieldsStruct(t *testing.T) {
 	}{}
 
 	PanicMatches(t, func() { _ = validate.Struct(stct) }, "Bad field type int")
+}
+
+func TestStructPartial(t *testing.T) {
+	p1 := []string{
+		"NoTag",
+		"Required",
+	}
+
+	p2 := []string{
+		"SubSlice[0].Test",
+		"Sub",
+		"SubIgnore",
+		"Anonymous.A",
+	}
+
+	p3 := []string{
+		"SubTest.Test",
+	}
+
+	p4 := []string{
+		"A",
+	}
+
+	tPartial := &TestPartial{
+		NoTag:    "NoTag",
+		Required: "Required",
+		SubSlice: []*SubTest{
+			{
+				Test: "Required",
+			},
+			{
+				Test: "Required",
+			},
+		},
+
+		Sub: &SubTest{
+			Test: "1",
+		},
+		SubIgnore: &SubTest{
+			Test: "",
+		},
+		Anonymous: struct {
+			A             string     `validate:"required"`
+			ASubSlice     []*SubTest `validate:"required,dive"`
+			SubAnonStruct []struct {
+				Test      string `validate:"required"`
+				OtherTest string `validate:"required"`
+			} `validate:"required,dive"`
+		}{
+			A: "1",
+			ASubSlice: []*SubTest{
+				{
+					Test: "Required",
+				},
+				{
+					Test: "Required",
+				},
+			},
+
+			SubAnonStruct: []struct {
+				Test      string `validate:"required"`
+				OtherTest string `validate:"required"`
+			}{
+				{"Required", "RequiredOther"},
+				{"Required", "RequiredOther"},
+			},
+		},
+	}
+
+	validate := New()
+
+	// the following should all return no errors as everything is valid in the default state
+	errs := validate.StructPartialCtx(context.Background(), tPartial, p1...)
+	Equal(t, errs, nil)
+
+	errs = validate.StructPartial(tPartial, p2...)
+	Equal(t, errs, nil)
+
+	// this isn't really a robust test, but is meant to illustrate the ANON CASE below
+	errs = validate.StructPartial(tPartial.SubSlice[0], p3...)
+	Equal(t, errs, nil)
+
+	errs = validate.StructExceptCtx(context.Background(), tPartial, p1...)
+	Equal(t, errs, nil)
+
+	errs = validate.StructExcept(tPartial, p2...)
+	Equal(t, errs, nil)
+
+	// mod tPartial for required field and re-test making sure invalid fields are NOT required:
+	tPartial.Required = ""
+
+	errs = validate.StructExcept(tPartial, p1...)
+	Equal(t, errs, nil)
+
+	errs = validate.StructPartial(tPartial, p2...)
+	Equal(t, errs, nil)
+
+	// inversion and retesting Partial to generate failures:
+	errs = validate.StructPartial(tPartial, p1...)
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "TestPartial.Required", "TestPartial.Required", "Required", "Required", "required")
+
+	errs = validate.StructExcept(tPartial, p2...)
+	AssertError(t, errs, "TestPartial.Required", "TestPartial.Required", "Required", "Required", "required")
+
+	// reset Required field, and set nested struct
+	tPartial.Required = "Required"
+	tPartial.Anonymous.A = ""
+
+	// will pass as unset fields is not going to be tested
+	errs = validate.StructPartial(tPartial, p1...)
+	Equal(t, errs, nil)
+
+	errs = validate.StructExcept(tPartial, p2...)
+	Equal(t, errs, nil)
+
+	// ANON CASE the response here is strange, it clearly does what it is being told to
+	errs = validate.StructExcept(tPartial.Anonymous, p4...)
+	Equal(t, errs, nil)
+
+	// will fail as unset field is tested
+	errs = validate.StructPartial(tPartial, p2...)
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "TestPartial.Anonymous.A", "TestPartial.Anonymous.A", "A", "A", "required")
+
+	errs = validate.StructExcept(tPartial, p1...)
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "TestPartial.Anonymous.A", "TestPartial.Anonymous.A", "A", "A", "required")
+
+	// reset nested struct and unset struct in slice
+	tPartial.Anonymous.A = "Required"
+	tPartial.SubSlice[0].Test = ""
+
+	// these will pass as unset item is NOT tested
+	errs = validate.StructPartial(tPartial, p1...)
+	Equal(t, errs, nil)
+
+	errs = validate.StructExcept(tPartial, p2...)
+	Equal(t, errs, nil)
+
+	// these will fail as unset item IS tested
+	errs = validate.StructExcept(tPartial, p1...)
+	AssertError(t, errs, "TestPartial.SubSlice[0].Test", "TestPartial.SubSlice[0].Test", "Test", "Test", "required")
+	Equal(t, len(errs.(ValidationErrors)), 1)
+
+	errs = validate.StructPartial(tPartial, p2...)
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "TestPartial.SubSlice[0].Test", "TestPartial.SubSlice[0].Test", "Test", "Test", "required")
+	Equal(t, len(errs.(ValidationErrors)), 1)
+
+	// Unset second slice member concurrently to test dive behavior:
+	tPartial.SubSlice[1].Test = ""
+	errs = validate.StructPartial(tPartial, p1...)
+	Equal(t, errs, nil)
+
+	// NOTE: When specifying nested items, it is still the users responsibility
+	// to specify the dive tag, the library does not override this.
+	errs = validate.StructExcept(tPartial, p2...)
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "TestPartial.SubSlice[1].Test", "TestPartial.SubSlice[1].Test", "Test", "Test", "required")
+
+	errs = validate.StructExcept(tPartial, p1...)
+	Equal(t, len(errs.(ValidationErrors)), 2)
+	AssertError(t, errs, "TestPartial.SubSlice[0].Test", "TestPartial.SubSlice[0].Test", "Test", "Test", "required")
+	AssertError(t, errs, "TestPartial.SubSlice[1].Test", "TestPartial.SubSlice[1].Test", "Test", "Test", "required")
+
+	errs = validate.StructPartial(tPartial, p2...)
+	NotEqual(t, errs, nil)
+	Equal(t, len(errs.(ValidationErrors)), 1)
+	AssertError(t, errs, "TestPartial.SubSlice[0].Test", "TestPartial.SubSlice[0].Test", "Test", "Test", "required")
+
+	// reset struct in slice, and unset struct in slice in unset position
+	tPartial.SubSlice[0].Test = "Required"
+
+	// these will pass as the unset item is NOT tested
+	errs = validate.StructPartial(tPartial, p1...)
+	Equal(t, errs, nil)
+
+	errs = validate.StructPartial(tPartial, p2...)
+	Equal(t, errs, nil)
+
+	// testing for missing item by exception, yes it dives and fails
+	errs = validate.StructExcept(tPartial, p1...)
+	NotEqual(t, errs, nil)
+	Equal(t, len(errs.(ValidationErrors)), 1)
+	AssertError(t, errs, "TestPartial.SubSlice[1].Test", "TestPartial.SubSlice[1].Test", "Test", "Test", "required")
+
+	errs = validate.StructExcept(tPartial, p2...)
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "TestPartial.SubSlice[1].Test", "TestPartial.SubSlice[1].Test", "Test", "Test", "required")
+
+	tPartial.SubSlice[1].Test = "Required"
+	tPartial.Anonymous.SubAnonStruct[0].Test = ""
+	// these will pass as the unset item is NOT tested
+	errs = validate.StructPartial(tPartial, p1...)
+	Equal(t, errs, nil)
+
+	errs = validate.StructPartial(tPartial, p2...)
+	Equal(t, errs, nil)
+
+	errs = validate.StructExcept(tPartial, p1...)
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "TestPartial.Anonymous.SubAnonStruct[0].Test", "TestPartial.Anonymous.SubAnonStruct[0].Test", "Test", "Test", "required")
+
+	errs = validate.StructExcept(tPartial, p2...)
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "TestPartial.Anonymous.SubAnonStruct[0].Test", "TestPartial.Anonymous.SubAnonStruct[0].Test", "Test", "Test", "required")
+
+	// Test for unnamed struct
+	testStruct := &TestStruct{
+		String: "test",
+	}
+	unnamedStruct := struct {
+		String string `validate:"required" json:"StringVal"`
+	}{String: "test"}
+	composedUnnamedStruct := struct{ *TestStruct }{&TestStruct{String: "test"}}
+
+	errs = validate.StructPartial(testStruct, "String")
+	Equal(t, errs, nil)
+
+	errs = validate.StructPartial(unnamedStruct, "String")
+	Equal(t, errs, nil)
+
+	errs = validate.StructPartial(composedUnnamedStruct, "TestStruct.String")
+	Equal(t, errs, nil)
+
+	testStruct.String = ""
+	errs = validate.StructPartial(testStruct, "String")
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "TestStruct.String", "TestStruct.String", "String", "String", "required")
+
+	unnamedStruct.String = ""
+	errs = validate.StructPartial(unnamedStruct, "String")
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "String", "String", "String", "String", "required")
+
+	composedUnnamedStruct.String = ""
+	errs = validate.StructPartial(composedUnnamedStruct, "TestStruct.String")
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "TestStruct.String", "TestStruct.String", "String", "String", "required")
+}
+
+func TestStructFiltered(t *testing.T) {
+	p1 := func(ns []byte) bool {
+		if bytes.HasSuffix(ns, []byte("NoTag")) || bytes.HasSuffix(ns, []byte("Required")) {
+			return false
+		}
+
+		return true
+	}
+	p2 := func(ns []byte) bool {
+		if bytes.HasSuffix(ns, []byte("SubSlice[0].Test")) ||
+			bytes.HasSuffix(ns, []byte("SubSlice[0]")) ||
+			bytes.HasSuffix(ns, []byte("SubSlice")) ||
+			bytes.HasSuffix(ns, []byte("Sub")) ||
+			bytes.HasSuffix(ns, []byte("SubIgnore")) ||
+			bytes.HasSuffix(ns, []byte("Anonymous")) ||
+			bytes.HasSuffix(ns, []byte("Anonymous.A")) {
+			return false
+		}
+
+		return true
+	}
+	p3 := func(ns []byte) bool {
+		return !bytes.HasSuffix(ns, []byte("SubTest.Test"))
+	}
+	tPartial := &TestPartial{
+		NoTag:    "NoTag",
+		Required: "Required",
+		SubSlice: []*SubTest{
+			{
+				Test: "Required",
+			},
+			{
+				Test: "Required",
+			},
+		},
+		Sub: &SubTest{
+			Test: "1",
+		},
+		SubIgnore: &SubTest{
+			Test: "",
+		},
+		Anonymous: struct {
+			A             string     `validate:"required"`
+			ASubSlice     []*SubTest `validate:"required,dive"`
+			SubAnonStruct []struct {
+				Test      string `validate:"required"`
+				OtherTest string `validate:"required"`
+			} `validate:"required,dive"`
+		}{
+			A: "1",
+			ASubSlice: []*SubTest{
+				{
+					Test: "Required",
+				},
+				{
+					Test: "Required",
+				},
+			},
+			SubAnonStruct: []struct {
+				Test      string `validate:"required"`
+				OtherTest string `validate:"required"`
+			}{
+				{"Required", "RequiredOther"},
+				{"Required", "RequiredOther"},
+			},
+		},
+	}
+
+	validate := New()
+	// the following should all return no errors as everything is valid in the default state
+	errs := validate.StructFilteredCtx(context.Background(), tPartial, p1)
+	Equal(t, errs, nil)
+
+	errs = validate.StructFiltered(tPartial, p2)
+	Equal(t, errs, nil)
+
+	// this isn't really a robust test, but is meant to illustrate the ANON CASE below
+	errs = validate.StructFiltered(tPartial.SubSlice[0], p3)
+	Equal(t, errs, nil)
+
+	// mod tPartial for required field and re-test making sure invalid fields are NOT required:
+	tPartial.Required = ""
+	// inversion and retesting Partial to generate failures:
+	errs = validate.StructFiltered(tPartial, p1)
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "TestPartial.Required", "TestPartial.Required", "Required", "Required", "required")
+
+	// reset Required field, and set nested struct
+	tPartial.Required = "Required"
+	tPartial.Anonymous.A = ""
+
+	// will pass as unset fields is not going to be tested
+	errs = validate.StructFiltered(tPartial, p1)
+	Equal(t, errs, nil)
+
+	// will fail as unset field is tested
+	errs = validate.StructFiltered(tPartial, p2)
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "TestPartial.Anonymous.A", "TestPartial.Anonymous.A", "A", "A", "required")
+
+	// reset nested struct and unset struct in slice
+	tPartial.Anonymous.A = "Required"
+	tPartial.SubSlice[0].Test = ""
+
+	// these will pass as unset item is NOT tested
+	errs = validate.StructFiltered(tPartial, p1)
+	Equal(t, errs, nil)
+
+	errs = validate.StructFiltered(tPartial, p2)
+	NotEqual(t, errs, nil)
+	AssertError(t, errs, "TestPartial.SubSlice[0].Test", "TestPartial.SubSlice[0].Test", "Test", "Test", "required")
+	Equal(t, len(errs.(ValidationErrors)), 1)
+
+	// Unset second slice member concurrently to test dive behavior:
+	tPartial.SubSlice[1].Test = ""
+
+	errs = validate.StructFiltered(tPartial, p1)
+	Equal(t, errs, nil)
+
+	errs = validate.StructFiltered(tPartial, p2)
+	NotEqual(t, errs, nil)
+	Equal(t, len(errs.(ValidationErrors)), 1)
+	AssertError(t, errs, "TestPartial.SubSlice[0].Test", "TestPartial.SubSlice[0].Test", "Test", "Test", "required")
+
+	// reset struct in slice, and unset struct in slice in unset position
+	tPartial.SubSlice[0].Test = "Required"
+
+	// these will pass as the unset item is NOT tested
+	errs = validate.StructFiltered(tPartial, p1)
+	Equal(t, errs, nil)
+
+	errs = validate.StructFiltered(tPartial, p2)
+	Equal(t, errs, nil)
+
+	tPartial.SubSlice[1].Test = "Required"
+	tPartial.Anonymous.SubAnonStruct[0].Test = ""
+
+	// these will pass as the unset item is NOT tested
+	errs = validate.StructFiltered(tPartial, p1)
+	Equal(t, errs, nil)
+
+	errs = validate.StructFiltered(tPartial, p2)
+	Equal(t, errs, nil)
+
+	dt := time.Now()
+	err := validate.StructFiltered(&dt, func(ns []byte) bool { return true })
+	NotEqual(t, err, nil)
+	Equal(t, err.Error(), "validator: (nil *time.Time)")
+}
+
+func TestUUIDValidation(t *testing.T) {
+	tests := []struct {
+		param    string
+		expected bool
+	}{
+		{"", false},
+		{"xxxa987fbc9-4bed-3078-cf07-9141ba07c9f3", false},
+		{"a987fbc9-4bed-3078-cf07-9141ba07c9f3xxx", false},
+		{"a987fbc94bed3078cf079141ba07c9f3", false},
+		{"934859", false},
+		{"987fbc9-4bed-3078-cf07a-9141ba07c9f3", false},
+		{"aaaaaaaa-1111-1111-aaag-111111111111", false},
+		{"a987fbc9-4bed-3078-cf07-9141ba07c9f3", true},
+	}
+
+	validate := New()
+
+	for i, test := range tests {
+		errs := validate.Var(test.param, "uuid")
+
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d UUID failed Error: %s", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d UUID failed Error: %s", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "uuid" {
+					t.Fatalf("Index: %d UUID failed Error: %s", i, errs)
+				}
+			}
+		}
+	}
+
+	// Test UUID validation on uuid structs type that implements Stringer interface.
+	structWithValidUUID := struct {
+		UUID uuidTestType `validate:"uuid"`
+	}{
+		UUID: uuidTestType{val: "a987fbc9-4bed-3078-cf07-9141ba07c9f3"},
+	}
+	structWithInvalidUUID := struct {
+		UUID uuidTestType `validate:"uuid"`
+	}{
+		UUID: uuidTestType{val: "934859"},
+	}
+
+	if err := validate.Struct(structWithValidUUID); err != nil {
+		t.Fatalf("UUID failed Error: %s", err)
+	}
+	if err := validate.Struct(structWithInvalidUUID); err == nil {
+		t.Fatal("UUID failed Error expected but received nil")
+	}
+
+	// Test on Alias type with Stringer interface.
+	alias := uuidAlias("a987fbc9-4bed-3078-cf07-9141ba07c9f3")
+	if err := validate.Var(alias, "uuid"); err != nil {
+		t.Fatalf("UUID failed Error: %s", err)
+	}
 }
 
 func AssertError(t *testing.T, err error, nsKey, structNsKey, field, structField, expectedTag string) {
