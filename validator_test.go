@@ -6,6 +6,7 @@ import (
 	"database/sql/driver"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -64,6 +65,18 @@ func (r NotRed) IsNotRed() bool {
 }
 
 func (r NotRed) DoNothing() {}
+
+func (r NotRed) String() string {
+	return "not red instance"
+}
+
+func (r *NotRed) Validate() error {
+	if r != nil && r.Color == "red" {
+		return errors.New("should not be red")
+	}
+
+	return nil
+}
 
 type TestStruct struct {
 	String string `validate:"required" json:"StringVal"`
