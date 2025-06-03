@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"database/sql/driver"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -12573,6 +12574,23 @@ func StructLevelInvalidError(sl StructLevel) {
 	if top.Value == s.Value {
 		sl.ReportError(nil, "Value", "Value", "required", "")
 	}
+}
+
+func ValidateCustomType(field reflect.Value) interface{} {
+	cust, ok := field.Interface().(MadeUpCustomType)
+	if ok && len(cust.FirstName) != 0 || len(cust.LastName) != 0 {
+		return cust.FirstName + " " + cust.LastName
+	}
+	return ""
+}
+
+func ValidateValuerType(field reflect.Value) interface{} {
+	if valuer, ok := field.Interface().(driver.Valuer); ok {
+		if val, err := valuer.Value(); err == nil {
+			return val
+		}
+	}
+	return nil
 }
 
 func getError(err error, nsKey, structNsKey string) (fe FieldError) {
