@@ -182,6 +182,18 @@ type valuer struct {
 	Name string
 }
 
+func (v valuer) Value() (driver.Value, error) {
+	if v.Name == "errorme" {
+		return nil, errors.New("SQL Driver Valuer error: some kind of error")
+	}
+
+	if len(v.Name) == 0 {
+		return nil, nil
+	}
+
+	return v.Name, nil
+}
+
 func TestCrossNamespaceFieldValidation(t *testing.T) {
 	type SliceStruct struct {
 		Name string
