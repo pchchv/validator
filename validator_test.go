@@ -12503,6 +12503,276 @@ func TestNilValidator(t *testing.T) {
 	PanicMatches(t, func() { _ = val.StructPartial(ts, "Test") }, "runtime error: invalid memory address or nil pointer dereference")
 }
 
+func TestUniqueValidation(t *testing.T) {
+	tests := []struct {
+		param    interface{}
+		expected bool
+	}{
+		// Arrays
+		{[2]string{"a", "b"}, true},
+		{[2]int{1, 2}, true},
+		{[2]float64{1, 2}, true},
+		{[2]interface{}{"a", "b"}, true},
+		{[2]interface{}{"a", 1}, true},
+		{[2]float64{1, 1}, false},
+		{[2]int{1, 1}, false},
+		{[2]string{"a", "a"}, false},
+		{[2]interface{}{"a", "a"}, false},
+		{[4]interface{}{"a", 1, "b", 1}, false},
+		{[2]*string{stringPtr("a"), stringPtr("b")}, true},
+		{[2]*int{intPtr(1), intPtr(2)}, true},
+		{[2]*float64{float64Ptr(1), float64Ptr(2)}, true},
+		{[2]*string{stringPtr("a"), stringPtr("a")}, false},
+		{[2]*float64{float64Ptr(1), float64Ptr(1)}, false},
+		{[2]*int{intPtr(1), intPtr(1)}, false},
+		// Slices
+		{[]string{"a", "b"}, true},
+		{[]int{1, 2}, true},
+		{[]float64{1, 2}, true},
+		{[]interface{}{"a", "b"}, true},
+		{[]interface{}{"a", 1}, true},
+		{[]float64{1, 1}, false},
+		{[]int{1, 1}, false},
+		{[]string{"a", "a"}, false},
+		{[]interface{}{"a", "a"}, false},
+		{[]interface{}{"a", 1, "b", 1}, false},
+		{[]*string{stringPtr("a"), stringPtr("b")}, true},
+		{[]*int{intPtr(1), intPtr(2)}, true},
+		{[]*float64{float64Ptr(1), float64Ptr(2)}, true},
+		{[]*string{stringPtr("a"), stringPtr("a")}, false},
+		{[]*float64{float64Ptr(1), float64Ptr(1)}, false},
+		{[]*int{intPtr(1), intPtr(1)}, false},
+		// Maps
+		{map[string]string{"one": "a", "two": "b"}, true},
+		{map[string]int{"one": 1, "two": 2}, true},
+		{map[string]float64{"one": 1, "two": 2}, true},
+		{map[string]interface{}{"one": "a", "two": "b"}, true},
+		{map[string]interface{}{"one": "a", "two": 1}, true},
+		{map[string]float64{"one": 1, "two": 1}, false},
+		{map[string]int{"one": 1, "two": 1}, false},
+		{map[string]string{"one": "a", "two": "a"}, false},
+		{map[string]interface{}{"one": "a", "two": "a"}, false},
+		{map[string]interface{}{"one": "a", "two": 1, "three": "b", "four": 1}, false},
+		{map[string]*string{"one": stringPtr("a"), "two": stringPtr("a")}, false},
+		{map[string]*string{"one": stringPtr("a"), "two": stringPtr("b")}, true},
+		{map[string]*int{"one": intPtr(1), "two": intPtr(1)}, false},
+		{map[string]*int{"one": intPtr(1), "two": intPtr(2)}, true},
+		{map[string]*float64{"one": float64Ptr(1.1), "two": float64Ptr(1.1)}, false},
+		{map[string]*float64{"one": float64Ptr(1.1), "two": float64Ptr(1.2)}, true},
+	}
+
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.param, "unique")
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d unique failed Error: %v", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d unique failed Error: %v", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "unique" {
+					t.Fatalf("Index: %d unique failed Error: %v", i, errs)
+				}
+			}
+		}
+	}
+
+	PanicMatches(t, func() { _ = validate.Var(1.0, "unique") }, "Bad field type float64")
+
+	t.Run("struct", func(t *testing.T) {
+		tests := []struct {
+			param    interface{}
+			expected bool
+		}{
+			{struct {
+				A string `validate:"unique=B"`
+				B string
+			}{A: "abc", B: "bcd"}, true},
+			{struct {
+				A string `validate:"unique=B"`
+				B string
+			}{A: "abc", B: "abc"}, false},
+		}
+		validate := New()
+		for i, test := range tests {
+			errs := validate.Struct(test.param)
+			if test.expected {
+				if !IsEqual(errs, nil) {
+					t.Fatalf("Index: %d unique failed Error: %v", i, errs)
+				}
+			} else {
+				if IsEqual(errs, nil) {
+					t.Fatalf("Index: %d unique failed Error: %v", i, errs)
+				} else {
+					val := getError(errs, "A", "A")
+					if val.Tag() != "unique" {
+						t.Fatalf("Index: %d unique failed Error: %v", i, errs)
+					}
+				}
+			}
+		}
+	})
+}
+
+func TestUniqueValidationStructPtrSlice(t *testing.T) {
+	testStructs := []*struct {
+		A *string
+		B *string
+	}{
+		{A: stringPtr("one"), B: stringPtr("two")},
+		{A: stringPtr("one"), B: stringPtr("three")},
+		{},
+	}
+	tests := []struct {
+		target   interface{}
+		param    string
+		expected bool
+	}{
+		{testStructs, "unique", true},
+		{testStructs, "unique=A", false},
+		{testStructs, "unique=B", true},
+	}
+	validate := New()
+	for i, test := range tests {
+		errs := validate.Var(test.target, test.param)
+		if test.expected {
+			if !IsEqual(errs, nil) {
+				t.Fatalf("Index: %d unique failed Error: %v", i, errs)
+			}
+		} else {
+			if IsEqual(errs, nil) {
+				t.Fatalf("Index: %d unique failed Error: %v", i, errs)
+			} else {
+				val := getError(errs, "", "")
+				if val.Tag() != "unique" {
+					t.Fatalf("Index: %d unique failed Error: %v", i, errs)
+				}
+			}
+		}
+	}
+
+	PanicMatches(t, func() { _ = validate.Var(testStructs, "unique=C") }, "Bad field name C")
+}
+
+func TestPrivateFieldsStruct(t *testing.T) {
+	type tc struct {
+		stct     interface{}
+		errorNum int
+	}
+
+	tcs := []tc{
+		{
+			stct: &struct {
+				f1 int8  `validate:"required"`
+				f2 int16 `validate:"required"`
+				f3 int32 `validate:"required"`
+				f4 int64 `validate:"required"`
+			}{},
+			errorNum: 4,
+		},
+		{
+			stct: &struct {
+				f1 uint8  `validate:"required"`
+				f2 uint16 `validate:"required"`
+				f3 uint32 `validate:"required"`
+				f4 uint64 `validate:"required"`
+			}{},
+			errorNum: 4,
+		},
+		{
+			stct: &struct {
+				f1 complex64  `validate:"required"`
+				f2 complex128 `validate:"required"`
+			}{},
+			errorNum: 2,
+		},
+		{
+			stct: &struct {
+				f1 float32 `validate:"required"`
+				f2 float64 `validate:"required"`
+			}{},
+			errorNum: 2,
+		},
+		{
+			stct: struct {
+				f1 int8  `validate:"required"`
+				f2 int16 `validate:"required"`
+				f3 int32 `validate:"required"`
+				f4 int64 `validate:"required"`
+			}{},
+			errorNum: 4,
+		},
+		{
+			stct: struct {
+				f1 uint8  `validate:"required"`
+				f2 uint16 `validate:"required"`
+				f3 uint32 `validate:"required"`
+				f4 uint64 `validate:"required"`
+			}{},
+			errorNum: 4,
+		},
+		{
+			stct: struct {
+				f1 complex64  `validate:"required"`
+				f2 complex128 `validate:"required"`
+			}{},
+			errorNum: 2,
+		},
+		{
+			stct: struct {
+				f1 float32 `validate:"required"`
+				f2 float64 `validate:"required"`
+			}{},
+			errorNum: 2,
+		},
+		{
+			stct: struct {
+				f1 *int `validate:"required"`
+				f2 struct {
+					f3 int `validate:"required"`
+				}
+			}{},
+			errorNum: 2,
+		},
+		{
+			stct: &struct {
+				f1 *int `validate:"required"`
+				f2 struct {
+					f3 int `validate:"required"`
+				}
+			}{},
+			errorNum: 2,
+		},
+		{
+			stct: &struct {
+				f1 map[string]string `validate:"required,dive,required"`
+				f2 *int              `validate:"omitnil,min=2"`
+			}{
+				f1: map[string]string{"key": ""},
+				f2: intPtr(1),
+			},
+			errorNum: 2,
+		},
+	}
+
+	validate := New(WithPrivateFieldValidation())
+	for _, tc := range tcs {
+		err := validate.Struct(tc.stct)
+		NotEqual(t, err, nil)
+
+		errs := err.(ValidationErrors)
+		Equal(t, len(errs), tc.errorNum)
+	}
+	stct := &struct {
+		f1 int `validate:"uri"`
+	}{}
+
+	PanicMatches(t, func() { _ = validate.Struct(stct) }, "Bad field type int")
+}
+
 func AssertError(t *testing.T, err error, nsKey, structNsKey, field, structField, expectedTag string) {
 	var found bool
 	var fe FieldError
