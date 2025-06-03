@@ -59,6 +59,12 @@ type NotRed struct {
 	Color string
 }
 
+func (r NotRed) IsNotRed() bool {
+	return r.Color != "red"
+}
+
+func (r NotRed) DoNothing() {}
+
 type TestStruct struct {
 	String string `validate:"required" json:"StringVal"`
 }
