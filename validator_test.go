@@ -13372,6 +13372,18 @@ func ValidateValuerType(field reflect.Value) interface{} {
 	return nil
 }
 
+func OverrideIntTypeForSomeReason(field reflect.Value) interface{} {
+	i, ok := field.Interface().(int)
+	switch {
+	case ok && i == 1:
+		return "1"
+	case ok && i == 2:
+		return "12"
+	default:
+		return ""
+	}
+}
+
 func getError(err error, nsKey, structNsKey string) (fe FieldError) {
 	errs := err.(ValidationErrors)
 	for i := 0; i < len(errs); i++ {
