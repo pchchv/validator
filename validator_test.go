@@ -113,6 +113,23 @@ type TestSlice struct {
 	OmitEmpty []int `validate:"omitempty,min=1,max=10"`
 }
 
+type TestPartial struct {
+	NoTag     string
+	BlankTag  string     `validate:""`
+	Required  string     `validate:"required"`
+	SubSlice  []*SubTest `validate:"required,dive"`
+	Sub       *SubTest
+	SubIgnore *SubTest `validate:"-"`
+	Anonymous struct {
+		A             string     `validate:"required"`
+		ASubSlice     []*SubTest `validate:"required,dive"`
+		SubAnonStruct []struct {
+			Test      string `validate:"required"`
+			OtherTest string `validate:"required"`
+		} `validate:"required,dive"`
+	}
+}
+
 func TestCrossNamespaceFieldValidation(t *testing.T) {
 	type SliceStruct struct {
 		Name string
