@@ -193,7 +193,7 @@ func fieldMatchesRegexByStringerValOrString(regexFn func() *regexp.Regexp, fl Fi
 	case reflect.String:
 		return regex.MatchString(fl.Field().String())
 	default:
-		if stringer, ok := fl.Field().Interface().(fmt.Stringer); ok {
+		if stringer, ok := getValue(fl.Field()).(fmt.Stringer); ok {
 			return regex.MatchString(stringer.String())
 		} else {
 			return regex.MatchString(fl.Field().String())
@@ -256,7 +256,6 @@ func asBool(param string) bool {
 func asFloat64(param string) float64 {
 	i, err := strconv.ParseFloat(param, 64)
 	panicIf(err)
-
 	return i
 }
 
@@ -264,6 +263,5 @@ func asFloat64(param string) float64 {
 func asFloat32(param string) float64 {
 	i, err := strconv.ParseFloat(param, 32)
 	panicIf(err)
-
 	return i
 }
