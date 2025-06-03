@@ -12357,6 +12357,126 @@ func TestStructStringValidation(t *testing.T) {
 	AssertError(t, errs, "TestString.Iface.F", "TestString.Iface.F", "F", "F", "len")
 }
 
+func TestStructUint64Validation(t *testing.T) {
+	validate := New()
+	tSuccess := &TestUint64{
+		Required:  1,
+		Len:       10,
+		Min:       1,
+		Max:       10,
+		MinMax:    5,
+		OmitEmpty: 0,
+	}
+
+	errs := validate.Struct(tSuccess)
+	Equal(t, errs, nil)
+
+	tFail := &TestUint64{
+		Required:  0,
+		Len:       11,
+		Min:       0,
+		Max:       11,
+		MinMax:    0,
+		OmitEmpty: 11,
+	}
+	errs = validate.Struct(tFail)
+	// Assert Top Level
+	NotEqual(t, errs, nil)
+	Equal(t, len(errs.(ValidationErrors)), 6)
+
+	// Assert Fields
+	AssertError(t, errs, "TestUint64.Required", "TestUint64.Required", "Required", "Required", "required")
+	AssertError(t, errs, "TestUint64.Len", "TestUint64.Len", "Len", "Len", "len")
+	AssertError(t, errs, "TestUint64.Min", "TestUint64.Min", "Min", "Min", "min")
+	AssertError(t, errs, "TestUint64.Max", "TestUint64.Max", "Max", "Max", "max")
+	AssertError(t, errs, "TestUint64.MinMax", "TestUint64.MinMax", "MinMax", "MinMax", "min")
+	AssertError(t, errs, "TestUint64.OmitEmpty", "TestUint64.OmitEmpty", "OmitEmpty", "OmitEmpty", "max")
+}
+
+func TestStructFloat64Validation(t *testing.T) {
+	validate := New()
+	tSuccess := &TestFloat64{
+		Required:  1,
+		Len:       10,
+		Min:       1,
+		Max:       10,
+		MinMax:    5,
+		OmitEmpty: 0,
+	}
+	errs := validate.Struct(tSuccess)
+	Equal(t, errs, nil)
+
+	tFail := &TestFloat64{
+		Required:  0,
+		Len:       11,
+		Min:       0,
+		Max:       11,
+		MinMax:    0,
+		OmitEmpty: 11,
+	}
+	errs = validate.Struct(tFail)
+	// Assert Top Level
+	NotEqual(t, errs, nil)
+	Equal(t, len(errs.(ValidationErrors)), 6)
+
+	// Assert Fields
+	AssertError(t, errs, "TestFloat64.Required", "TestFloat64.Required", "Required", "Required", "required")
+	AssertError(t, errs, "TestFloat64.Len", "TestFloat64.Len", "Len", "Len", "len")
+	AssertError(t, errs, "TestFloat64.Min", "TestFloat64.Min", "Min", "Min", "min")
+	AssertError(t, errs, "TestFloat64.Max", "TestFloat64.Max", "Max", "Max", "max")
+	AssertError(t, errs, "TestFloat64.MinMax", "TestFloat64.MinMax", "MinMax", "MinMax", "min")
+	AssertError(t, errs, "TestFloat64.OmitEmpty", "TestFloat64.OmitEmpty", "OmitEmpty", "OmitEmpty", "max")
+}
+
+func TestStructSliceValidation(t *testing.T) {
+	validate := New()
+	tSuccess := &TestSlice{
+		Required:  []int{1},
+		Len:       []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
+		Min:       []int{1, 2},
+		Max:       []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
+		MinMax:    []int{1, 2, 3, 4, 5},
+		OmitEmpty: nil,
+	}
+	errs := validate.Struct(tSuccess)
+	Equal(t, errs, nil)
+
+	tFail := &TestSlice{
+		Required:  nil,
+		Len:       []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1},
+		Min:       []int{},
+		Max:       []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1},
+		MinMax:    []int{},
+		OmitEmpty: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1},
+	}
+	errs = validate.Struct(tFail)
+	NotEqual(t, errs, nil)
+	Equal(t, len(errs.(ValidationErrors)), 6)
+
+	// Assert Field Errors
+	AssertError(t, errs, "TestSlice.Required", "TestSlice.Required", "Required", "Required", "required")
+	AssertError(t, errs, "TestSlice.Len", "TestSlice.Len", "Len", "Len", "len")
+	AssertError(t, errs, "TestSlice.Min", "TestSlice.Min", "Min", "Min", "min")
+	AssertError(t, errs, "TestSlice.Max", "TestSlice.Max", "Max", "Max", "max")
+	AssertError(t, errs, "TestSlice.MinMax", "TestSlice.MinMax", "MinMax", "MinMax", "min")
+	AssertError(t, errs, "TestSlice.OmitEmpty", "TestSlice.OmitEmpty", "OmitEmpty", "OmitEmpty", "max")
+
+	fe := getError(errs, "TestSlice.Len", "TestSlice.Len")
+	NotEqual(t, fe, nil)
+	Equal(t, fe.Field(), "Len")
+	Equal(t, fe.StructField(), "Len")
+	Equal(t, fe.Namespace(), "TestSlice.Len")
+	Equal(t, fe.StructNamespace(), "TestSlice.Len")
+	Equal(t, fe.Tag(), "len")
+	Equal(t, fe.ActualTag(), "len")
+	Equal(t, fe.Param(), "10")
+	Equal(t, fe.Kind(), reflect.Slice)
+	Equal(t, fe.Type(), reflect.TypeOf([]int{}))
+
+	_, ok := fe.Value().([]int)
+	Equal(t, ok, true)
+}
+
 func AssertError(t *testing.T, err error, nsKey, structNsKey, field, structField, expectedTag string) {
 	var found bool
 	var fe FieldError
