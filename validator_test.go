@@ -55,6 +55,10 @@ func (i *Impl) Foo() string {
 	return i.F
 }
 
+type NotRed struct {
+	Color string
+}
+
 type TestStruct struct {
 	String string `validate:"required" json:"StringVal"`
 }
