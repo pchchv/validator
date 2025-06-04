@@ -227,3 +227,13 @@ validate := validator.New(validator.WithRequiredStructEnabled())
 | - | - |
 | iscolor | hexcolor\|rgb\|rgba\|hsl\|hsla |
 | country_code | iso3166_1_alpha2\|iso3166_1_alpha3\|iso3166_1_alpha_numeric |
+
+## Error Return Value
+
+Validator only returns InvalidValidationError for bad input validation, nil or ValidationErrors as a type error.
+So all to do is to check if the returned error is nil, and if not, check if the error is InvalidValidationError (if necessary, most of the time it is not), cast it to the ValidationErrors type as shown below:
+
+```go
+err := validate.Struct(mystruct)
+validationErrors := err.(validator.ValidationErrors)
+```
