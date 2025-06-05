@@ -1,4 +1,4 @@
-package main
+package customFieldTypes
 
 import (
 	"database/sql"
