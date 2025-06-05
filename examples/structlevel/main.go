@@ -8,6 +8,17 @@ type Address struct {
 	Phone  string `validate:"required"`
 }
 
+// User contains user information.
+type User struct {
+	FirstName      string     `json:"fname"`
+	LastName       string     `json:"lname"`
+	Age            uint8      `validate:"gte=0,lte=130"`
+	Email          string     `json:"e-mail" validate:"required,email"`
+	FavouriteColor string     `validate:"hexcolor|rgb|rgba"`
+	Addresses      []*Address `validate:"required,dive,required"`
+	Gender         Gender     `json:"gender" validate:"required,gender_custom_validation"`
+}
+
 type Gender uint
 
 func (gender Gender) String() string {
