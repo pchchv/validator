@@ -38,3 +38,18 @@ const (
 
 // If a single instance of Validate is used, it caches struct info.
 var validate *validator.Validate
+
+// UserStructLevelValidation contains custom structure level validations
+// that don't always make sense at the field validation level.
+// For example, this function validates whether FirstName or LastName exists.
+// It could do this with a custom field validation,
+// but then would have to add it to both fields, duplicating logic + overhead,
+// and this way it only validated once.
+func UserStructLevelValidation(sl validator.StructLevel) {
+	user := sl.Current().Interface().(User)
+	if len(user.FirstName) == 0 && len(user.LastName) == 0 {
+		sl.ReportError(user.FirstName, "fname", "FirstName", "fnameorlname", "")
+		sl.ReportError(user.LastName, "lname", "LastName", "fnameorlname", "")
+	}
+	// plus can do more, even with different tag than "fnameorlname"
+}
