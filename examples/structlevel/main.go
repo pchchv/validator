@@ -7,3 +7,5 @@ type Address struct {
 	Planet string `validate:"required"`
 	Phone  string `validate:"required"`
 }
+
+type Gender uint
