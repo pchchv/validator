@@ -9,3 +9,16 @@ type Address struct {
 }
 
 type Gender uint
+
+func (gender Gender) String() string {
+	terms := []string{"Male", "Female"}
+	if gender < Male || gender > Female {
+		return "unknown"
+	}
+	return terms[gender]
+}
+
+const (
+	Male Gender = iota + 1
+	Female
+)
