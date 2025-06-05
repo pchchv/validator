@@ -241,4 +241,5 @@ validationErrors := err.(validator.ValidationErrors)
 ##### Examples:
 
 - [Simple](https://github.com/pchchv/validator/blob/master/examples/simple/main.go)
+- [Struct Level](https://github.com/pchchv/validator/blob/master/examples/struct_level/main.go)
 - [Custom Field Types](https://github.com/pchchv/validator/blob/master/examples/customfieldtypes/main.go)
