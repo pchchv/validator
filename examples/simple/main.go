@@ -87,3 +87,9 @@ func validateStruct() {
 	}
 	// save user to database
 }
+
+func main() {
+	validate = validator.New(validator.WithRequiredStructEnabled())
+	validateStruct()
+	validateVariable()
+}

@@ -237,3 +237,7 @@ So all to do is to check if the returned error is nil, and if not, check if the 
 err := validate.Struct(mystruct)
 validationErrors := err.(validator.ValidationErrors)
 ```
+
+##### Examples:
+
+- [Simple](https://github.com/pchchv/validator/blob/master/examples/simple/main.go)
