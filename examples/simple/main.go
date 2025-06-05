@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 
 	"github.com/pchchv/validator"
@@ -35,4 +36,54 @@ func validateVariable() {
 		return
 	}
 	// email ok, move on
+}
+
+func validateStruct() {
+	address := &Address{
+		Street: "Eavesdown Docks",
+		Planet: "Persphone",
+		Phone:  "none",
+	}
+
+	user := &User{
+		FirstName:      "Jack",
+		LastName:       "Pochechuev",
+		Age:            31,
+		Gender:         "male",
+		Email:          "ipchchv@gmail.com",
+		FavouriteColor: "#ff0000",
+		Addresses:      []*Address{address},
+	}
+
+	// returns nil or ValidationErrors ( []FieldError )
+	if err := validate.Struct(user); err != nil {
+		// this check is only needed when your code could produce
+		// an invalid value for validation such as interface with nil
+		// value most including myself do not usually have code like this
+		var invalidValidationError *validator.InvalidValidationError
+		if errors.As(err, &invalidValidationError) {
+			log.Println(err)
+			return
+		}
+
+		var validateErrs validator.ValidationErrors
+		if errors.As(err, &validateErrs) {
+			for _, e := range validateErrs {
+				log.Println(e.Namespace())
+				log.Println(e.Field())
+				log.Println(e.StructNamespace())
+				log.Println(e.StructField())
+				log.Println(e.Tag())
+				log.Println(e.ActualTag())
+				log.Println(e.Kind())
+				log.Println(e.Type())
+				log.Println(e.Value())
+				log.Println(e.Param())
+				log.Println()
+			}
+		}
+		// here it is possible to create custom error messages
+		return
+	}
+	// save user to database
 }
