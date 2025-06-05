@@ -1,6 +1,15 @@
 package structLevel
 
-import "github.com/pchchv/validator"
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"reflect"
+	"strings"
+
+	"github.com/pchchv/validator"
+)
 
 // Address houses a users address information.
 type Address struct {
@@ -66,4 +75,88 @@ func UserStructLevelValidation(sl validator.StructLevel) {
 		sl.ReportError(user.LastName, "lname", "LastName", "fnameorlname", "")
 	}
 	// plus can do more, even with different tag than "fnameorlname"
+}
+
+func main() {
+	validate = validator.New()
+	// register function to get tag name from json tags
+	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		if name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]; name != "-" {
+			return name
+		}
+		return ""
+	})
+
+	// register validation for 'User'
+	// NOTE: only have to register a non-pointer type for 'User',
+	// validator internally dereferences during it's type checks
+	validate.RegisterStructValidation(UserStructLevelValidation, User{})
+	// register a custom validation for user genre on a line validates that an enum is within the interval
+	if err := validate.RegisterValidation("gender_custom_validation", func(fl validator.FieldLevel) bool {
+		value := fl.Field().Interface().(Gender)
+		return value.String() != "unknown"
+	}); err != nil {
+		log.Println(err)
+		return
+	}
+
+	// build 'User' info,
+	// normally posted data etc.
+	address := &Address{
+		Street: "Eavesdown Docks",
+		Planet: "Persphone",
+		Phone:  "none",
+		City:   "Unknown",
+	}
+
+	user := &User{
+		FirstName:      "",
+		LastName:       "",
+		Age:            45,
+		Email:          "Badger.Smith@gmail",
+		FavouriteColor: "#000",
+		Addresses:      []*Address{address},
+	}
+
+	// returns InvalidValidationError for bad validation input,
+	// nil or ValidationErrors ( []FieldError )
+	if err := validate.Struct(user); err != nil {
+		// this check is only needed when your code could produce
+		// an invalid value for validation such as interface with nil
+		// value most including myself do not usually have code like this
+		var invalidValidationError *validator.InvalidValidationError
+		if errors.As(err, &invalidValidationError) {
+			log.Println(err)
+			return
+		}
+
+		var validateErrs validator.ValidationErrors
+		if errors.As(err, &validateErrs) {
+			for _, err := range validateErrs {
+				e := validationError{
+					Namespace:       err.Namespace(),
+					Field:           err.Field(),
+					StructNamespace: err.StructNamespace(),
+					StructField:     err.StructField(),
+					Tag:             err.Tag(),
+					ActualTag:       err.ActualTag(),
+					Kind:            err.Kind().String(),
+					Type:            err.Type().String(),
+					Value:           fmt.Sprint(err.Value()),
+					Param:           err.Param(),
+					Message:         err.Error(),
+				}
+
+				if indent, err := json.MarshalIndent(e, "", "  "); err != nil {
+					log.Println(err)
+					panic(err)
+				} else {
+					log.Println(string(indent))
+				}
+			}
+		}
+		// here it is possible to create custom error messages
+		return
+	}
+	// save user to database
 }
