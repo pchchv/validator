@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"database/sql/driver"
+	"log"
 	"reflect"
 
 	"github.com/pchchv/validator"
@@ -26,4 +27,15 @@ func ValidateValuer(field reflect.Value) interface{} {
 		// handle the error how you want
 	}
 	return nil
+}
+
+func main() {
+	validate = validator.New()
+	// register all sql.Null* types to use the ValidateValuer CustomTypeFunc
+	validate.RegisterCustomTypeFunc(ValidateValuer, sql.NullString{}, sql.NullInt64{}, sql.NullBool{}, sql.NullFloat64{})
+	// build object for validation
+	x := DbBackedUser{Name: sql.NullString{String: "", Valid: true}, Age: sql.NullInt64{Int64: 0, Valid: false}}
+	if err := validate.Struct(x); err != nil {
+		log.Printf("Err(s):\n%+v\n", err)
+	}
 }
