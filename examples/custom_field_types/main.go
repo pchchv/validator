@@ -1,9 +1,16 @@
 package main
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"reflect"
 )
+
+// DbBackedUser User struct
+type DbBackedUser struct {
+	Name sql.NullString `validate:"required"`
+	Age  sql.NullInt64  `validate:"required"`
+}
 
 // ValidateValuer implements validator.CustomTypeFunc.
 func ValidateValuer(field reflect.Value) interface{} {
