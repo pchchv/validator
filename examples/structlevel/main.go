@@ -1,5 +1,7 @@
 package structLevel
 
+import "github.com/pchchv/validator"
+
 // Address houses a users address information.
 type Address struct {
 	Street string `validate:"required"`
@@ -33,3 +35,6 @@ const (
 	Male Gender = iota + 1
 	Female
 )
+
+// If a single instance of Validate is used, it caches struct info.
+var validate *validator.Validate
