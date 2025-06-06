@@ -17,6 +17,17 @@ func (v *defaultValidator) Engine() interface{} {
 	return v.validate
 }
 
+func (v *defaultValidator) ValidateStruct(obj interface{}) error {
+	if kindOfData(obj) == reflect.Struct {
+		v.lazyinit()
+		if err := v.validate.Struct(obj); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (v *defaultValidator) lazyinit() {
 	v.once.Do(func() {
 		v.validate = validator.New()
