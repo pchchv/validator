@@ -4,8 +4,11 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/gin-gonic/gin/binding"
 	"github.com/pchchv/validator"
 )
+
+var _ binding.StructValidator = &defaultValidator{}
 
 type defaultValidator struct {
 	once     sync.Once
