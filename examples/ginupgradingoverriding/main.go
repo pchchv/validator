@@ -48,3 +48,8 @@ func kindOfData(data interface{}) reflect.Kind {
 
 	return valueType
 }
+
+func main() {
+	binding.Validator = new(defaultValidator)
+	// regular gin logic
+}
