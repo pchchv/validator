@@ -1,6 +1,7 @@
 package ginUpgradingOverriding
 
 import (
+	"reflect"
 	"sync"
 
 	"github.com/pchchv/validator"
@@ -22,4 +23,14 @@ func (v *defaultValidator) lazyinit() {
 		v.validate.SetTagName("binding")
 		// add any custom validations etc. here
 	})
+}
+
+func kindOfData(data interface{}) reflect.Kind {
+	value := reflect.ValueOf(data)
+	valueType := value.Kind()
+	if valueType == reflect.Ptr {
+		valueType = value.Elem().Kind()
+	}
+
+	return valueType
 }
